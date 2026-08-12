@@ -55,6 +55,9 @@ app.get('/api/test-db', async (req, res) => {
   }
 })
 
+import fs from 'fs'
+import path from 'path'
+
 // Centralized Error Middleware
 app.use(errorHandler)
 
@@ -62,6 +65,28 @@ app.use(errorHandler)
 app.listen(PORT, async () => {
   console.log(`[Server] Running on http://localhost:${PORT}`)
   try {
+    const schemaPath = path.join(process.cwd(), 'schema.sql')
+    if (fs.existsSync(schemaPath)) {
+      console.log('[Server] Initializing database schema from schema.sql...')
+      const sql = fs.readFileSync(schemaPath, 'utf8')
+      
+      // Clean and split SQL file into individual statements
+      const statements = sql
+        .split(';')
+        .map(s => s.trim())
+        .filter(s => s.length > 0 && !s.startsWith('--'))
+
+      for (const statement of statements) {
+        if (!statement.toLowerCase().startsWith('create database') && !statement.toLowerCase().startsWith('use')) {
+          await db.query(statement)
+        }
+      }
+      console.log('[Server] Database schema initialized successfully.')
+    } else {
+      console.log('[Server] schema.sql not found, skipping auto-migration.')
+    }
+
+    // Auto-verify AuditLogs table (ensures it is set up regardless of schema.sql)
     await db.query(`
       CREATE TABLE IF NOT EXISTS AuditLogs (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -77,6 +102,6 @@ app.listen(PORT, async () => {
     `)
     console.log('[Server] Database AuditLogs table verified successfully.')
   } catch (err: any) {
-    console.error('[Server] Failed to initialize AuditLogs table:', err.message)
+    console.error('[Server] Failed to initialize database tables:', err.message)
   }
 })
