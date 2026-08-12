@@ -74,7 +74,7 @@ app.listen(PORT, async () => {
       const statements = sql
         .split(';')
         .map(s => s.trim())
-        .filter(s => s.length > 0 && !s.startsWith('--'))
+        .filter(s => s.length > 0)
 
       for (const statement of statements) {
         if (!statement.toLowerCase().startsWith('create database') && !statement.toLowerCase().startsWith('use')) {
@@ -102,6 +102,6 @@ app.listen(PORT, async () => {
     `)
     console.log('[Server] Database AuditLogs table verified successfully.')
   } catch (err: any) {
-    console.error('[Server] Failed to initialize database tables:', err.message)
+    console.error('[Server] Failed to initialize database tables:', err.message || err)
   }
 })
