@@ -384,6 +384,7 @@ function App() {
           localStorage.setItem('user', JSON.stringify(data.user))
           setToken(data.token)
           setUser(data.user)
+          setDashboardSubTab('summary')
           // Keep inputs populated momentarily so browser password managers capture the submission successfully
           setTimeout(() => {
             setLoginId('')
@@ -870,6 +871,7 @@ function App() {
     setSelectedProduct(null)
     setSelectedChallan(null)
     setEmployees([])
+    setDashboardSubTab('summary')
     navigateTo('landing')
   }
 
