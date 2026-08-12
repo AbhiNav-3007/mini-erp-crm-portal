@@ -1,0 +1,91 @@
+/* App.css - Print Styles and Custom Confirm Modal Animations */
+
+/* Custom Animations */
+@keyframes bounceIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-bounce-in {
+  animation: bounceIn 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* Print Overrides */
+@media print {
+  /* Force page background to white and hide other elements */
+  html, body, #root, .min-h-screen, .dark-theme-app, main {
+    background-color: white !important;
+    background: white !important;
+    color: black !important;
+    box-shadow: none !important;
+  }
+
+  /* Ensure the printable invoice container is visible and clean */
+  #printable-invoice {
+    display: block !important;
+    background-color: white !important;
+    background: white !important;
+    color: black !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Force all nested text elements to black, override dark mode styles */
+  #printable-invoice h1,
+  #printable-invoice h2,
+  #printable-invoice h3,
+  #printable-invoice p,
+  #printable-invoice span,
+  #printable-invoice table,
+  #printable-invoice th,
+  #printable-invoice td,
+  #printable-invoice div {
+    color: #000000 !important;
+    background-color: transparent !important;
+    background: transparent !important;
+  }
+
+  /* Borders and lines */
+  #printable-invoice .border-b-2,
+  #printable-invoice .border-b,
+  #printable-invoice .border-t,
+  #printable-invoice border-slate-900,
+  #printable-invoice border-slate-350,
+  #printable-invoice border-slate-200 {
+    border-color: #000000 !important;
+  }
+
+  /* Table Header Background */
+  #printable-invoice thead tr {
+    background-color: #f1f5f9 !important;
+    border-bottom: 2px solid #000000 !important;
+  }
+
+  #printable-invoice th {
+    font-weight: bold !important;
+    color: #000000 !important;
+  }
+
+  #printable-invoice td {
+    border-bottom: 1px solid #e2e8f0 !important;
+  }
+
+  /* Status Badge Styling for Print */
+  #printable-invoice .status-badge {
+    border: 1px solid #000000 !important;
+    padding: 2px 6px !important;
+    font-weight: bold !important;
+  }
+
+  /* Ensure colors are printed correctly */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}

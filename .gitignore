@@ -1,0 +1,8 @@
+# Root Git Ignore
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+*.log
+.env
+**/.env

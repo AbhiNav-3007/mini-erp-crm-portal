@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: erp_crm_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: MYSQL@DATABASE@12
+      MYSQL_DATABASE: erp_crm_db
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./backend/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pMYSQL@DATABASE@12"]
+      timeout: 20s
+      retries: 10
+
+  backend:
+    build: ./backend
+    container_name: erp_crm_backend
+    restart: always
+    environment:
+      PORT: 5001
+      DB_HOST: db
+      DB_USER: root
+      DB_PASSWORD: MYSQL@DATABASE@12
+      DB_NAME: erp_crm_db
+      DB_PORT: 3306
+      JWT_SECRET: my_ultra_secure_jwt_secret_key_123
+    ports:
+      - "5001:5001"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build: ./frontend
+    container_name: erp_crm_frontend
+    restart: always
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+
+volumes:
+  mysql_data:

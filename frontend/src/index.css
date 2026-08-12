@@ -1,0 +1,226 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Outfit', sans-serif;
+}
+
+body {
+  font-family: 'Outfit', sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
+  background-color: #f8fafc;
+}
+
+/* Global Font Scale-Up to prevent "small/boring" look */
+html {
+  font-size: 15.5px; /* Boost base rem size */
+}
+
+.text-xs {
+  font-size: 0.85rem !important; /* ~13.2px */
+}
+.text-\[9px\] {
+  font-size: 0.75rem !important;
+}
+.text-\[10px\] {
+  font-size: 0.8rem !important;
+}
+.text-\[11px\] {
+  font-size: 0.85rem !important;
+}
+.text-sm {
+  font-size: 0.95rem !important;
+}
+.text-base {
+  font-size: 1.075rem !important;
+}
+.text-lg {
+  font-size: 1.25rem !important;
+}
+.text-xl {
+  font-size: 1.5rem !important;
+}
+.text-2xl {
+  font-size: 1.85rem !important;
+}
+.text-3xl {
+  font-size: 2.25rem !important;
+}
+.text-4xl {
+  font-size: 2.75rem !important;
+}
+
+/* Custom dark mode overrides */
+.dark-theme-app {
+  background-color: #000000 !important;
+  color: #f8fafc;
+}
+
+/* Base button and card overrides in dark mode */
+.dark-theme-app .bg-white {
+  background-color: #121212 !important;
+  border-color: #2e3b62 !important;
+  color: #f8fafc !important;
+}
+
+.dark-theme-app .bg-slate-200 {
+  background-color: #222222 !important;
+  color: #ffffff !important;
+}
+
+.dark-theme-app .bg-slate-100 {
+  background-color: #111111 !important;
+  color: #f1f5f9 !important;
+  border-color: #222222 !important;
+}
+
+.dark-theme-app .text-slate-900,
+.dark-theme-app .text-slate-850,
+.dark-theme-app .text-slate-800,
+.dark-theme-app .text-slate-700 {
+  color: #f1f5f9 !important;
+}
+
+.dark-theme-app .text-slate-400,
+.dark-theme-app .text-slate-450,
+.dark-theme-app .text-slate-500,
+.dark-theme-app .text-slate-550,
+.dark-theme-app .text-slate-600 {
+  color: #94a3b8 !important;
+}
+
+.dark-theme-app .border-slate-200,
+.dark-theme-app .border-slate-250,
+.dark-theme-app .border-slate-300,
+.dark-theme-app .border-slate-100 {
+  border-color: #222222 !important;
+}
+
+.dark-theme-app .bg-slate-50 {
+  background-color: #1a1a1a !important;
+  border-color: #222222 !important;
+}
+
+.dark-theme-app input,
+.dark-theme-app select,
+.dark-theme-app textarea {
+  background-color: #1a1a1a !important;
+  color: #f8fafc !important;
+  border-color: #222222 !important;
+}
+
+.dark-theme-app input::placeholder {
+  color: #64748b !important;
+}
+
+.dark-theme-app tr:hover,
+.dark-theme-app div.cursor-pointer:hover {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+.dark-theme-app th {
+  background-color: #111111 !important;
+  color: #94a3b8 !important;
+  border-color: #222222 !important;
+}
+
+.dark-theme-app header,
+.dark-theme-app footer {
+  background-color: #121212 !important;
+  border-color: #222222 !important;
+}
+
+.dark-theme-app select option {
+  background-color: #121212 !important;
+  color: #f8fafc !important;
+}
+
+/* Operational Profile Cards Overrides in Dark Mode */
+.dark-theme-app .bg-purple-50 {
+  background-color: #1e112d !important;
+  border-color: #3b2257 !important;
+}
+.dark-theme-app .bg-purple-100 {
+  background-color: #3b2257 !important;
+  color: #e9d5ff !important;
+}
+
+.dark-theme-app .bg-blue-50 {
+  background-color: #0f1c3f !important;
+  border-color: #1e3a8a !important;
+}
+.dark-theme-app .bg-blue-100 {
+  background-color: #1e3a8a !important;
+  color: #dbeafe !important;
+}
+
+.dark-theme-app .bg-amber-50 {
+  background-color: #2a1b0c !important;
+  border-color: #78350f !important;
+}
+.dark-theme-app .bg-amber-100 {
+  background-color: #78350f !important;
+  color: #fef3c7 !important;
+}
+
+.dark-theme-app .bg-emerald-50 {
+  background-color: #0b251a !important;
+  border-color: #065f46 !important;
+}
+.dark-theme-app .bg-emerald-100 {
+  background-color: #065f46 !important;
+  color: #d1fae5 !important;
+}
+
+/* Micro-animations and transitions */
+button, a, select, input, textarea {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.animate-pulse-slow {
+  animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .5; }
+}
+
+/* Print Invoice Styles */
+@media print {
+  body {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    font-size: 12pt !important;
+  }
+  
+  /* Hide all non-printable wrappers */
+  #root > div > header,
+  #root > div > footer,
+  #root > div > main,
+  .no-print,
+  button,
+  nav,
+  aside {
+    display: none !important;
+  }
+
+  /* Show and isolate invoice container */
+  #printable-invoice {
+    display: block !important;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    background-color: white !important;
+    color: black !important;
+    padding: 30px !important;
+    border: none !important;
+  }
+
+  /* Force print color settings */
+  * {
+    color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
+  }
+}
