@@ -124,8 +124,8 @@ function App() {
 
   // Sync state with back button and fetch health status
   useEffect(() => {
-    const savedToken = localStorage.getItem('token')
-    const savedUser = localStorage.getItem('user')
+    const savedToken = sessionStorage.getItem('token')
+    const savedUser = sessionStorage.getItem('user')
     let initialTab = 'landing'
 
     const hash = window.location.hash.replace('#', '')
@@ -380,8 +380,8 @@ function App() {
       .then((res) => res.json())
       .then((data) => {
         if (data.status === 'success') {
-          localStorage.setItem('token', data.token)
-          localStorage.setItem('user', JSON.stringify(data.user))
+          sessionStorage.setItem('token', data.token)
+          sessionStorage.setItem('user', JSON.stringify(data.user))
           setToken(data.token)
           setUser(data.user)
           setDashboardSubTab('summary')
@@ -863,8 +863,8 @@ function App() {
 
   // Logout Action
   const handleLogout = () => {
-    localStorage.removeItem('token')
-    localStorage.removeItem('user')
+    sessionStorage.removeItem('token')
+    sessionStorage.removeItem('user')
     setToken(null)
     setUser(null)
     setSelectedCustomer(null)
@@ -874,6 +874,31 @@ function App() {
     setDashboardSubTab('summary')
     navigateTo('landing')
   }
+
+  // Auto logout after 1 minute of inactivity
+  useEffect(() => {
+    if (!token) return
+
+    let timeoutId
+
+    const resetTimer = () => {
+      if (timeoutId) clearTimeout(timeoutId)
+      timeoutId = setTimeout(() => {
+        setUiAlert({ message: 'Logged out due to 1 minute of inactivity', type: 'error' })
+        handleLogout()
+      }, 60000)
+    }
+
+    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click']
+    events.forEach((name) => window.addEventListener(name, resetTimer))
+
+    resetTimer()
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId)
+      events.forEach((name) => window.removeEventListener(name, resetTimer))
+    }
+  }, [token])
 
   const roles = [
     {
