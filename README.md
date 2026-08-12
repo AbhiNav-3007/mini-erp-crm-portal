@@ -1,177 +1,266 @@
 # Mini ERP + CRM Operations Portal
 
-A premium, modern, and highly secure full-stack **multi-tenant SaaS** enterprise operations portal. Any business can register their company, onboard employees, and manage their operations completely isolated from every other tenant — all on a single shared platform.
+> A full-stack, multi-tenant SaaS operations portal for wholesale/distribution businesses built with Node.js, TypeScript, Express, MySQL, and React.
 
-### 🔗 Live Deployments
-* **Frontend Portal (Vercel):** [https://mini-erp-crm-portal-coral.vercel.app](https://mini-erp-crm-portal-coral.vercel.app)
-* **Backend API (Railway):** [https://mini-erp-crm-portal-production-375b.up.railway.app](https://mini-erp-crm-portal-production-375b.up.railway.app)
+[![CI Build Check](https://github.com/AbhiNav-3007/mini-erp-crm-portal/actions/workflows/deploy.yml/badge.svg)](https://github.com/AbhiNav-3007/mini-erp-crm-portal/actions/workflows/deploy.yml)
 
 ---
 
-## 📸 Screenshots
+## Live Deployment
 
-### 1. Operations Portal Home Page (Light & Dark Theme Side-by-Side)
-![Home Page Light & Dark Combined](docs/screenshots/landing_combined.png)
-
-### 2. Sign In Console & Credentials
-![Sign In Console](docs/screenshots/signin_dark.png)
-
-### 3. Dashboard Summary (Central Metrics Console)
-![Admin Dashboard](docs/screenshots/dashboard_dark.png)
-
-### 4. Customers CRM Directory (with Activity Logs)
-![Customers CRM](docs/screenshots/customer_crm_dark.png)
-
-### 5. Sales Challan Registry & Invoicing Details
-![Sales Challans](docs/screenshots/challan_draft_dark.png)
-
-### 6. Invoice PDF Print Preview (Professional Layout)
-![Invoice Print Preview](docs/screenshots/challan_print_preview.png)
-
-### 7. System Audits (Database Change Ledger)
-![System Auditing](docs/screenshots/audit_trail_dark.png)
+| Service | URL |
+|---|---|
+| **Frontend (Vercel)** | https://mini-erp-crm-portal-coral.vercel.app |
+| **Backend API (Railway)** | https://mini-erp-crm-portal-production-375b.up.railway.app |
 
 ---
 
-## 🌟 Key Features
-
-### 1. Multi-Tenant SaaS Architecture
-The system supports unlimited business tenants on a single shared database, with complete data isolation:
-* **Company Registration:** Any new business registers via the **Activate Account → Register Company** tab. They receive a unique Company ID.
-* **Tenant Scoping:** Every database query is scoped by `company_id` extracted from the user's JWT. Company A can never see Company B's data.
-* **Unique Company IDs:** Even if two companies share the same name (e.g., "Apex Logistics"), their auto-increment Company ID is always unique and forms the basis of all data separation.
-
-### 2. Unified Onboarding (Single Entry Point)
-The **Activate Account** page serves two purposes via a clean tab-switcher:
-* **Activate Employee** — existing employees enter their Company ID + Employee ID to set up their login credentials.
-* **Register Company** — new business owners register their company and set up the initial Admin account in one step.
-
-### 3. Multi-Profile Role-Based Access Control (RBAC)
-Tailored operational modules depending on the logged-in role:
-* **Admin:** Full system control, employee roster management, pre-registration, audit logs.
-* **Sales:** Customer database management, follow-up logging, issuing draft/confirmed challans.
-* **Warehouse:** Product inventory catalog, stock updates, stock movement history.
-* **Accounts:** Confirming/cancelling challans, reviewing customer balances, logging adjustments.
-
-### 4. Automated Employee Pre-Registration
-* Admin pre-registers staff directly from the Admin console.
-* When employees activate with their **Company ID, Employee ID, Name, Role, and Joining Date** matching the pre-registered record, their account is activated instantly without secondary approval.
-
-### 5. Advanced Security & Compliance
-* **Session Protection:** `sessionStorage` — auto logout when the browser tab closes.
-* **Idle Timeout:** Auto logout after **60 seconds of absolute inactivity** (monitors mouse, keys, clicks, scroll).
-* **Password Encryption:** Hashed using `bcrypt`, verified via JSON Web Tokens (JWT).
-* **Tenant Isolation:** All API routes enforce `company_id` scoping via JWT middleware.
-
-### 6. Sales Challans & Inventory Lifecycle
-* Draft challan creation with line-item totals.
-* **Confirming** a challan automatically deducts quantities from product inventory.
-* **Cancelling** safely returns or retains inventory stock.
-* Invoices can be exported to clean PDFs instantly.
-
-### 7. Interactive System Auditing
-* Every update to Customers, Products, or Challans creates a traceable entry in the **System Audits** log (table name, changed field, old value, new value, who modified it, timestamp).
-
----
-
-## 🛠️ Technology Stack
+## Technology Stack
 
 | Layer | Technology |
 |---|---|
-| **Frontend** | React.js, Vite, Tailwind CSS (custom dark/light themes) |
-| **Backend** | Node.js, Express, TypeScript |
-| **Database** | PostgreSQL (multi-tenant, `company_id` scoped) |
-| **Auth** | JWT (Bearer tokens with tenant payload) |
-| **Deployment** | Vercel (Frontend), Railway (Backend + PostgreSQL) |
+| **Frontend** | React.js, Vite, Tailwind CSS |
+| **Backend** | Node.js, Express.js, TypeScript |
+| **Database** | MySQL 9.4 |
+| **Authentication** | JWT Bearer tokens with company_id tenant payload |
+| **CI/CD** | GitHub Actions - automated build check on every push to main |
+| **Deployment** | Vercel (Frontend) + Railway (Backend + MySQL Docker container) |
 | **Containerisation** | Docker, Docker Compose |
 
 ---
 
-## 🏢 How Multi-Tenancy Works
+## Architecture Overview
 
-```
-New Business Owner:
-  → Activate Account → Register Company tab
-  → Enters Company Name + Admin details
-  → Receives unique Company ID (e.g., 3)
-  → All future data tagged with company_id = 3
+`
+React Frontend  (Vercel - auto-deploy from GitHub)
+        |
+        |  REST API calls with Bearer JWT token
+        v
+Express Backend  (Railway - Node.js + TypeScript)
+  |- JWT middleware  extracts: employee_id, role, company_id
+  |- RBAC middleware enforces role-based route access
+  |- All DB queries filtered: WHERE company_id = <tenant>
+        |
+        v
+MySQL 9.4 Database  (Railway - Docker container + persistent volume)
+`
 
-New Employee:
-  → Activate Account → Activate Employee tab
-  → Enters Company ID (3) + Employee ID + sets password
-  → Login issues JWT: { employee_id, role, company_id: 3 }
-  → Every API call is filtered: WHERE company_id = 3
-
-Result:
-  Company A and Company B share the same tables
-  but NEVER see each other's employees, customers,
-  products, or challans. ✅
-```
-
----
-
-## 🚀 Setup & Running Locally
-
-### Option A: Run via Docker Compose (Recommended)
-Bootstraps the PostgreSQL database, Backend server, and Frontend app automatically:
-
-1. Clone the repository and navigate to the project root.
-2. Build and run the containers:
-   ```bash
-   docker-compose up --build
-   ```
-3. Open `http://localhost:5173` to access the application.
+The frontend communicates with the backend through REST APIs only.
+Every protected API call carries a JWT token containing employee_id, role, and company_id.
+The backend enforces RBAC and multi-tenant isolation (company_id scoping) on every database query.
+GitHub Actions runs automated build checks on every push to main, confirming both the TypeScript backend and Vite frontend compile correctly before deployment.
 
 ---
 
-### Option B: Run Manually
+## Core Modules
 
-#### 1. Database Setup
-1. Create a PostgreSQL database named `erp_crm_db`.
-2. Import the schema by running the SQL queries in [backend/schema.sql](backend/schema.sql).
-
-#### 2. Running the Backend
-1. Navigate to the backend directory:
-   ```bash
-   cd backend
-   ```
-2. Create a `.env` file based on `.env.example`:
-   ```env
-   PORT=5001
-   DATABASE_URL=postgresql://user:password@localhost:5432/erp_crm_db
-   JWT_SECRET=your_jwt_secret
-   ```
-3. Install dependencies and start the server:
-   ```bash
-   npm install
-   npm run build
-   npm start
-   ```
-
-#### 3. Running the Frontend
-1. Navigate to the frontend directory:
-   ```bash
-   cd frontend
-   ```
-2. Create a `.env` file:
-   ```env
-   VITE_API_URL=http://localhost:5001
-   ```
-3. Install dependencies and run in development mode:
-   ```bash
-   npm install
-   npm run dev
-   ```
-4. Access the portal at `http://localhost:5173`.
+| Module | Roles with Access |
+|---|---|
+| Authentication and RBAC | All roles |
+| Employee Management | Admin |
+| Customer CRM + Follow-up Notes | Admin, Sales, Accounts |
+| Product Catalog + Inventory | Admin, Warehouse |
+| Stock Movement Ledger | Admin, Warehouse |
+| Sales Challans + PDF Export | Admin, Sales, Accounts |
+| System Audit Log | Admin |
+| Multi-Tenant Company Registration | Public (unauthenticated) |
 
 ---
 
-## 🔑 Getting Started (First Use)
+## Test Credentials
 
-1. Open the live portal or run locally.
-2. Click **Activate Account** in the header.
-3. Switch to the **Register Company** tab.
-4. Enter your **Company Name** and set up your Admin profile.
-5. Note the **Company ID** returned — share this with your employees.
-6. Your employees visit **Activate Account → Activate Employee**, enter the Company ID, and set their passwords.
-7. Everyone logs in with their Employee ID + Password + Company ID.
+### Step 1 - Register a Company (first time only)
+1. Open the live frontend URL
+2. Click **Activate Account** in the header, switch to **Register Company** tab
+3. Enter a company name (e.g. Test Company) and create an Admin profile
+4. Note the **Company ID** returned (e.g. 1) - required for all logins
+
+### Step 2 - Activate Employees
+Admin pre-creates employees from the Admin dashboard. Each employee activates via Activate Account > Activate Employee using their Company ID, Employee ID, name, role, joining date, and a new password.
+
+### Employee ID Prefix Convention
+
+| Role | ID Format | Example |
+|---|---|---|
+| Admin | AD-XXX | AD-001 |
+| Sales | SL-XXX | SL-001 |
+| Warehouse | WH-XXX | WH-001 |
+| Accounts | AC-XXX | AC-001 |
+
+### Login
+All users log in with Employee ID + Password + Company ID (the unique number from registration).
+
+---
+
+## API Documentation - Postman Collection
+
+The complete Postman collection is included in this repository:
+
+File: docs/ERP_CRM_Portal.postman_collection.json
+
+### How to import
+1. Open Postman > click Import
+2. Select docs/ERP_CRM_Portal.postman_collection.json
+3. All endpoints load, grouped by module
+
+### Key API Endpoints
+
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| POST | /api/auth/register-company | None | Register new business tenant |
+| POST | /api/auth/activate | None | Activate employee account |
+| POST | /api/auth/login | None | Login - returns JWT |
+| GET | /api/employees | Admin | List all company employees |
+| POST | /api/employees | Admin | Pre-register new employee |
+| DELETE | /api/employees/:id | Admin | Remove employee |
+| GET | /api/customers | Admin, Sales, Accounts | List customers with search and filter |
+| POST | /api/customers | Admin, Sales | Add customer |
+| PUT | /api/customers/:id | Admin, Sales | Edit customer |
+| POST | /api/customers/:id/notes | Admin, Sales | Add follow-up note |
+| GET | /api/products | Admin, Warehouse | List products |
+| POST | /api/products | Admin, Warehouse | Add product |
+| PUT | /api/products/:id | Admin, Warehouse | Edit product |
+| POST | /api/products/:id/stock | Admin, Warehouse | Record stock IN movement |
+| GET | /api/challans | Admin, Sales, Accounts | List challans |
+| POST | /api/challans | Sales | Create draft challan |
+| POST | /api/challans/:id/confirm | Admin, Sales | Confirm and deduct stock |
+| POST | /api/challans/:id/cancel | Admin, Sales | Cancel challan |
+| GET | /api/stock-movements | Admin, Warehouse | View stock movement ledger |
+| GET | /api/audit-logs | Admin | View system audit trail |
+
+All protected routes require: Authorization: Bearer <token> in the request header.
+
+---
+
+## Local Setup and Running
+
+### Option A - Docker Compose (Recommended)
+
+Runs MySQL, backend, and frontend in one command with no manual database setup.
+
+`ash
+# Clone the repository
+git clone https://github.com/AbhiNav-3007/mini-erp-crm-portal.git
+cd mini-erp-crm-portal
+
+# Build and start all services
+docker-compose up --build
+
+# Open in browser
+http://localhost:5173
+`
+
+MySQL data is persisted via a Docker volume and survives container restarts.
+
+---
+
+### Option B - Manual Setup
+
+#### 1. Database
+
+Install MySQL locally, create the database and import the schema:
+`sql
+CREATE DATABASE erp_crm_db;
+`
+`ash
+mysql -u root -p erp_crm_db < backend/schema.sql
+`
+
+#### 2. Backend
+
+`ash
+cd backend
+`
+
+Create a .env file (use .env.example as reference):
+`
+PORT=5001
+DB_HOST=localhost
+DB_USER=root
+DB_PASSWORD=your_mysql_password
+DB_NAME=erp_crm_db
+DB_PORT=3306
+JWT_SECRET=your_secure_random_secret
+FRONTEND_URL=http://localhost:5173
+`
+
+Install and start:
+`ash
+npm install
+npm run build
+npm start
+`
+
+Backend runs at: http://localhost:5001
+
+#### 3. Frontend
+
+`ash
+cd frontend
+`
+
+Create a .env file:
+`
+VITE_API_URL=http://localhost:5001
+`
+
+Install and run:
+`ash
+npm install
+npm run dev
+`
+
+Frontend runs at: http://localhost:5173
+
+---
+
+## Deployment Guide
+
+### Frontend - Vercel
+
+1. Go to vercel.com and import the GitHub repository
+2. Set Root Directory: frontend/
+3. Build Command: npm run build
+4. Add environment variable: VITE_API_URL = https://your-railway-backend-url.up.railway.app
+5. Deploy - Vercel auto-redeploys on every push to main
+
+### Backend + Database - Railway
+
+1. Go to railway.app and create a new project
+2. Add GitHub repo service with root set to backend/
+3. Add a MySQL service with a persistent volume
+4. Set environment variables on the backend service:
+`
+PORT=5001
+DB_HOST=mysql.railway.internal
+DB_USER=root
+DB_PASSWORD=<railway-generated>
+DB_NAME=railway
+DB_PORT=3306
+JWT_SECRET=your_secure_random_secret
+FRONTEND_URL=https://your-vercel-url.vercel.app
+`
+5. Deploy - Railway auto-redeploys on every push to main
+
+IMPORTANT: DB_HOST must be mysql.railway.internal and not localhost.
+Railway services communicate via internal private networking.
+
+---
+
+## Known Limitations and Incomplete Parts
+
+- **No password reset flow**: Employees must contact Admin if they lose access. No email-based recovery is implemented.
+- **No automated test suite**: The application is validated manually and through GitHub Actions build checks (TypeScript compile + Vite production build).
+- **Single-region deployment**: Hosted on Railway US West region. No CDN or global distribution layer is in place.
+- **No product image upload**: Product catalog stores text metadata only. AWS S3 image upload is not implemented.
+- **No refresh token mechanism**: JWT sessions expire after the set TTL period. Users must log in again after expiry or when the browser tab closes.
+
+---
+
+## Assumptions Made
+
+- Each company has at least one Admin who pre-creates all employee records before employees can activate their accounts.
+- Employee IDs must follow the prefix naming convention (AD-, SL-, WH-, AC-). The system validates this prefix against the selected role on activation.
+- Stock cannot go below zero. Challan confirmation is blocked if any product has insufficient quantity.
+- All monetary values are stored in INR with 2-decimal precision using DECIMAL(10,2).
+- Company names do not need to be unique. Only the auto-generated numeric Company ID is guaranteed unique across all tenants.
