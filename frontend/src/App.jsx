@@ -975,15 +975,6 @@ function App() {
                 ERP Portal
               </span>
             </div>
-            
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-slate-100 border border-slate-200 text-xs font-semibold">
-              <span className={`w-2 h-2 rounded-full ${
-                serverStatus === 'online' ? 'bg-green-600' : 'bg-red-600'
-              }`} />
-              <span className="text-slate-600">
-                {serverStatus === 'online' ? 'Connected' : 'Offline'}
-              </span>
-            </div>
           </div>
 
           <nav className="flex items-center gap-2">
