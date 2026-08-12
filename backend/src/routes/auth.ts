@@ -54,14 +54,19 @@ router.post('/activate', async (req: Request, res: Response, next: NextFunction)
     const salt = await bcrypt.genSalt(10)
     const hashedPassword = await bcrypt.hash(password, salt)
 
+    const [countRows]: any = await db.query('SELECT COUNT(*) as count FROM Employees')
+    const isFirst = countRows[0].count === 0
+
     await db.query(
-      'INSERT INTO Employees (id, name, role, joining_date, password, is_activated) VALUES (?, ?, ?, ?, ?, false)',
-      [id, name, role, joining_date, hashedPassword]
+      'INSERT INTO Employees (id, name, role, joining_date, password, is_activated) VALUES (?, ?, ?, ?, ?, ?)',
+      [id, name, role, joining_date, hashedPassword, isFirst]
     )
 
     res.status(200).json({
       status: 'success',
-      message: 'Registration request submitted successfully. Awaiting Admin approval.'
+      message: isFirst
+        ? 'First account registered and automatically approved!'
+        : 'Registration request submitted successfully. Awaiting Admin approval.'
     })
   } catch (error) {
     next(error)
