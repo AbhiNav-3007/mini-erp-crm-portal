@@ -28,6 +28,7 @@ function App() {
   const [loginError, setLoginError] = useState('')
   const [loginCompanyId, setLoginCompanyId] = useState('')
   const [actCompanyId, setActCompanyId] = useState('')
+  const [activationMode, setActivationMode] = useState('activate') // 'activate' or 'register'
 
   // Company Registration States
   const [regCompanyName, setRegCompanyName] = useState('')
@@ -1079,14 +1080,6 @@ function App() {
                   Sign In
                 </button>
                 <button
-                  onClick={() => navigateTo('register-business')}
-                  className={`px-3 py-1.5 rounded text-sm font-medium transition ${
-                    activeTab === 'register-business' ? 'text-slate-800 bg-slate-200' : 'text-slate-500 hover:text-slate-800'
-                  }`}
-                >
-                  Register Business
-                </button>
-                <button
                   onClick={() => navigateTo('activate')}
                   className="px-3 py-1.5 rounded text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white transition"
                 >
@@ -1277,213 +1270,253 @@ function App() {
         {activeTab === 'activate' && (
           <div className="max-w-md mx-auto bg-white border border-slate-200 p-8 rounded-xl shadow-md hover:shadow-lg transition-all duration-300 space-y-6 text-left">
             <div className="text-center space-y-2">
-              <h2 className="text-2xl font-extrabold text-slate-900">Activate Account</h2>
-              <p className="text-sm text-slate-500">Validate your pre-created registration details</p>
+              <h2 className="text-2xl font-extrabold text-slate-900">
+                {activationMode === 'activate' ? 'Activate Account' : 'Register Business'}
+              </h2>
+              <p className="text-sm text-slate-500">
+                {activationMode === 'activate' 
+                  ? 'Validate your pre-created registration details' 
+                  : 'Create a new company tenant and administrator profile'}
+              </p>
             </div>
 
-            {actError && <p className="text-sm text-red-600 bg-red-50 border border-red-200 p-3 rounded-lg text-center font-medium">{actError}</p>}
-            {actSuccess && <p className="text-sm text-green-600 bg-green-50 border border-green-200 p-3 rounded-lg text-center font-medium">{actSuccess}</p>}
-
-            <form onSubmit={handleActivate} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
-                  Company ID
-                </label>
-                <input
-                  type="number"
-                  required
-                  value={actCompanyId}
-                  onChange={(e) => setActCompanyId(e.target.value)}
-                  placeholder="Company ID e.g. 1"
-                  className="w-full bg-white border border-slate-300 rounded-lg px-3.5 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
-                  Role Profile
-                </label>
-                <select 
-                  value={actRole}
-                  onChange={(e) => setActRole(e.target.value)}
-                  className="w-full bg-white border border-slate-300 rounded-lg px-3.5 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition text-slate-700"
-                >
-                  <option>Admin</option>
-                  <option>Sales</option>
-                  <option>Warehouse</option>
-                  <option>Accounts</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
-                  Employee ID
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={actId}
-                  onChange={(e) => setActId(e.target.value)}
-                  placeholder="ID assigned by administrator"
-                  className="w-full bg-white border border-slate-300 rounded-lg px-3.5 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
-                  Full Name
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={actName}
-                  onChange={(e) => setActName(e.target.value)}
-                  placeholder="Official name"
-                  className="w-full bg-white border border-slate-300 rounded-lg px-3.5 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
-                  Joining Date
-                </label>
-                <input
-                  type="date"
-                  required
-                  value={actDate}
-                  onChange={(e) => setActDate(e.target.value)}
-                  className="w-full bg-white border border-slate-300 rounded-lg px-3.5 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition text-slate-650"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
-                  Password
-                </label>
-                <input
-                  type={showActPassword ? 'text' : 'password'}
-                  required
-                  value={actPassword}
-                  onChange={(e) => setActPassword(e.target.value)}
-                  placeholder="Minimum 6 characters"
-                  className="w-full bg-white border border-slate-300 rounded-lg px-3.5 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition"
-                />
-              </div>
-
-              <div className="flex items-center gap-2 pt-1">
-                <input
-                  type="checkbox"
-                  id="toggle-act-pass"
-                  checked={showActPassword}
-                  onChange={() => setShowActPassword(!showActPassword)}
-                  className="w-4 h-4 border border-slate-300 rounded"
-                />
-                <label htmlFor="toggle-act-pass" className="text-sm text-slate-500 font-medium cursor-pointer select-none">
-                  See Password
-                </label>
-              </div>
-
-              <button type="submit" className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition shadow-sm text-base cursor-pointer">
-                Activate Account
+            {/* Sub-tab selection toggle */}
+            <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-lg">
+              <button
+                type="button"
+                onClick={() => {
+                  setActivationMode('activate')
+                  setActError('')
+                  setActSuccess('')
+                  setRegError('')
+                  setRegSuccess('')
+                }}
+                className={`py-2 rounded-md text-xs font-bold transition cursor-pointer text-center ${
+                  activationMode === 'activate'
+                    ? 'bg-white text-slate-950 shadow-sm'
+                    : 'text-slate-550 hover:text-slate-800'
+                }`}
+              >
+                Activate Employee
               </button>
-            </form>
-          </div>
-        )}
-
-        {/* Register Business Page */}
-        {activeTab === 'register-business' && (
-          <div className="max-w-md mx-auto bg-white border border-slate-200 p-8 rounded-xl shadow-md hover:shadow-lg transition-all duration-300 space-y-6 text-left">
-            <div className="text-center space-y-2">
-              <h2 className="text-2xl font-extrabold text-slate-900">Register Business</h2>
-              <p className="text-sm text-slate-500">Create a new company tenant and administrator profile</p>
+              <button
+                type="button"
+                onClick={() => {
+                  setActivationMode('register')
+                  setActError('')
+                  setActSuccess('')
+                  setRegError('')
+                  setRegSuccess('')
+                }}
+                className={`py-2 rounded-md text-xs font-bold transition cursor-pointer text-center ${
+                  activationMode === 'register'
+                    ? 'bg-white text-slate-950 shadow-sm'
+                    : 'text-slate-550 hover:text-slate-800'
+                }`}
+              >
+                Register Company
+              </button>
             </div>
 
-            {regError && <p className="text-sm text-red-600 bg-red-50 border border-red-200 p-3 rounded-lg text-center font-medium">{regError}</p>}
-            {regSuccess && <p className="text-sm text-green-600 bg-green-50 border border-green-200 p-3 rounded-lg text-center font-medium">{regSuccess}</p>}
+            {activationMode === 'activate' ? (
+              <>
+                {actError && <p className="text-sm text-red-600 bg-red-50 border border-red-200 p-3 rounded-lg text-center font-medium">{actError}</p>}
+                {actSuccess && <p className="text-sm text-green-600 bg-green-50 border border-green-200 p-3 rounded-lg text-center font-medium">{actSuccess}</p>}
 
-            <form onSubmit={handleRegisterCompany} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
-                  Company Name
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={regCompanyName}
-                  onChange={(e) => setRegCompanyName(e.target.value)}
-                  placeholder="e.g. Apex Distribution"
-                  className="w-full bg-white border border-slate-300 rounded-lg px-3.5 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition"
-                />
-              </div>
-              <hr className="border-slate-200" />
-              <p className="text-xs font-bold text-slate-550 uppercase tracking-wider">Initial Administrator Profile</p>
-              <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
-                  Admin Employee ID
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={regAdminId}
-                  onChange={(e) => setRegAdminId(e.target.value)}
-                  placeholder="Must start with AD- (e.g., AD-001)"
-                  className="w-full bg-white border border-slate-300 rounded-lg px-3.5 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
-                  Admin Full Name
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={regAdminName}
-                  onChange={(e) => setRegAdminName(e.target.value)}
-                  placeholder="Official name"
-                  className="w-full bg-white border border-slate-300 rounded-lg px-3.5 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
-                  Joining Date
-                </label>
-                <input
-                  type="date"
-                  required
-                  value={regAdminJoiningDate}
-                  onChange={(e) => setRegAdminJoiningDate(e.target.value)}
-                  className="w-full bg-white border border-slate-300 rounded-lg px-3.5 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition text-slate-650"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
-                  Password
-                </label>
-                <input
-                  type={showRegPassword ? 'text' : 'password'}
-                  required
-                  value={regAdminPassword}
-                  onChange={(e) => setRegAdminPassword(e.target.value)}
-                  placeholder="Minimum 6 characters"
-                  className="w-full bg-white border border-slate-300 rounded-lg px-3.5 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition"
-                />
-              </div>
+                <form onSubmit={handleActivate} className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
+                      Company ID
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      value={actCompanyId}
+                      onChange={(e) => setActCompanyId(e.target.value)}
+                      placeholder="Company ID e.g. 1"
+                      className="w-full bg-white border border-slate-300 rounded-lg px-3.5 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
+                      Role Profile
+                    </label>
+                    <select 
+                      value={actRole}
+                      onChange={(e) => setActRole(e.target.value)}
+                      className="w-full bg-white border border-slate-300 rounded-lg px-3.5 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition text-slate-700"
+                    >
+                      <option>Admin</option>
+                      <option>Sales</option>
+                      <option>Warehouse</option>
+                      <option>Accounts</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
+                      Employee ID
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={actId}
+                      onChange={(e) => setActId(e.target.value)}
+                      placeholder="ID assigned by administrator"
+                      className="w-full bg-white border border-slate-300 rounded-lg px-3.5 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
+                      Full Name
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={actName}
+                      onChange={(e) => setActName(e.target.value)}
+                      placeholder="Official name"
+                      className="w-full bg-white border border-slate-300 rounded-lg px-3.5 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
+                      Joining Date
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      value={actDate}
+                      onChange={(e) => setActDate(e.target.value)}
+                      className="w-full bg-white border border-slate-300 rounded-lg px-3.5 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition text-slate-650"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
+                      Password
+                    </label>
+                    <input
+                      type={showActPassword ? 'text' : 'password'}
+                      required
+                      value={actPassword}
+                      onChange={(e) => setActPassword(e.target.value)}
+                      placeholder="Minimum 6 characters"
+                      className="w-full bg-white border border-slate-300 rounded-lg px-3.5 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition"
+                    />
+                  </div>
 
-              <div className="flex items-center gap-2 pt-1">
-                <input
-                  type="checkbox"
-                  id="toggle-reg-pass"
-                  checked={showRegPassword}
-                  onChange={() => setShowRegPassword(!showRegPassword)}
-                  className="w-4 h-4 border border-slate-300 rounded"
-                />
-                <label htmlFor="toggle-reg-pass" className="text-sm text-slate-500 font-medium cursor-pointer select-none">
-                  See Password
-                </label>
-              </div>
+                  <div className="flex items-center gap-2 pt-1">
+                    <input
+                      type="checkbox"
+                      id="toggle-act-pass"
+                      checked={showActPassword}
+                      onChange={() => setShowActPassword(!showActPassword)}
+                      className="w-4 h-4 border border-slate-300 rounded"
+                    />
+                    <label htmlFor="toggle-act-pass" className="text-sm text-slate-500 font-medium cursor-pointer select-none">
+                      See Password
+                    </label>
+                  </div>
 
-              <button type="submit" className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition shadow-sm text-base cursor-pointer">
-                Register Business & Admin
-              </button>
-            </form>
+                  <button type="submit" className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition shadow-sm text-base cursor-pointer">
+                    Activate Account
+                  </button>
+                </form>
+              </>
+            ) : (
+              <>
+                {regError && <p className="text-sm text-red-600 bg-red-50 border border-red-200 p-3 rounded-lg text-center font-medium">{regError}</p>}
+                {regSuccess && <p className="text-sm text-green-600 bg-green-50 border border-green-200 p-3 rounded-lg text-center font-medium">{regSuccess}</p>}
+
+                <form onSubmit={handleRegisterCompany} className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
+                      Company Name
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={regCompanyName}
+                      onChange={(e) => setRegCompanyName(e.target.value)}
+                      placeholder="e.g. Apex Distribution"
+                      className="w-full bg-white border border-slate-300 rounded-lg px-3.5 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition"
+                    />
+                  </div>
+                  <hr className="border-slate-200" />
+                  <p className="text-xs font-bold text-slate-550 uppercase tracking-wider">Initial Administrator Profile</p>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
+                      Admin Employee ID
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={regAdminId}
+                      onChange={(e) => setRegAdminId(e.target.value)}
+                      placeholder="Must start with AD- (e.g., AD-001)"
+                      className="w-full bg-white border border-slate-300 rounded-lg px-3.5 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
+                      Admin Full Name
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={regAdminName}
+                      onChange={(e) => setRegAdminName(e.target.value)}
+                      placeholder="Official name"
+                      className="w-full bg-white border border-slate-300 rounded-lg px-3.5 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
+                      Joining Date
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      value={regAdminJoiningDate}
+                      onChange={(e) => setRegAdminJoiningDate(e.target.value)}
+                      className="w-full bg-white border border-slate-300 rounded-lg px-3.5 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition text-slate-650"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
+                      Password
+                    </label>
+                    <input
+                      type={showRegPassword ? 'text' : 'password'}
+                      required
+                      value={regAdminPassword}
+                      onChange={(e) => setRegAdminPassword(e.target.value)}
+                      placeholder="Minimum 6 characters"
+                      className="w-full bg-white border border-slate-300 rounded-lg px-3.5 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-1">
+                    <input
+                      type="checkbox"
+                      id="toggle-reg-pass"
+                      checked={showRegPassword}
+                      onChange={() => setShowRegPassword(!showRegPassword)}
+                      className="w-4 h-4 border border-slate-300 rounded"
+                    />
+                    <label htmlFor="toggle-reg-pass" className="text-sm text-slate-500 font-medium cursor-pointer select-none">
+                      See Password
+                    </label>
+                  </div>
+
+                  <button type="submit" className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition shadow-sm text-base cursor-pointer">
+                    Register Business & Admin
+                  </button>
+                </form>
+              </>
+            )}
 
             <p className="text-center text-sm text-slate-500 pt-2">
-              Already registered? 
+              Already registered and activated? 
               <span className="text-blue-600 font-semibold cursor-pointer hover:underline ml-1" onClick={() => navigateTo('login')}>
                 Sign in here
               </span>
