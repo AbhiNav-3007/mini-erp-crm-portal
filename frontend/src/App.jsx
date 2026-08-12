@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import './App.css'
 
-const API_BASE = import.meta.env.VITE_API_URL || '${API_BASE}'
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5001'
 
 function App() {
   const showConfirm = (message, onConfirm) => {
@@ -152,7 +152,7 @@ function App() {
     window.addEventListener('popstate', handlePopState)
     // Check server status immediately and poll every 5 seconds
     const checkHealth = () => {
-      fetch('${API_BASE}/api/health')
+      fetch(`${API_BASE}/api/health`)
         .then((res) => {
           if (res.ok) setServerStatus('online')
           else setServerStatus('offline')
@@ -222,7 +222,7 @@ function App() {
       })
       .catch((err) => console.error('Error fetching products:', err))
 
-    fetch('${API_BASE}/api/products/low-stock', {
+    fetch(`${API_BASE}/api/products/low-stock`, {
       headers: { 'Authorization': `Bearer ${token}` }
     })
       .then((res) => res.json())
@@ -277,7 +277,7 @@ function App() {
   const fetchEmployeeRoster = () => {
     if (!token || user?.role !== 'Admin') return
 
-    fetch('${API_BASE}/api/employees', {
+    fetch(`${API_BASE}/api/employees`, {
       headers: { 'Authorization': `Bearer ${token}` }
     })
       .then((res) => res.json())
@@ -300,7 +300,7 @@ function App() {
   const fetchAuditLogs = () => {
     if (!token || user?.role !== 'Admin') return
 
-    fetch('${API_BASE}/api/employees/audit-logs', {
+    fetch(`${API_BASE}/api/employees/audit-logs`, {
       headers: { 'Authorization': `Bearer ${token}` }
     })
       .then((res) => res.json())
@@ -372,7 +372,7 @@ function App() {
     e.preventDefault()
     setLoginError('')
 
-    fetch('${API_BASE}/api/auth/login', {
+    fetch(`${API_BASE}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id: loginId, password: loginPassword, role: selectedRole })
@@ -403,7 +403,7 @@ function App() {
     setActError('')
     setActSuccess('')
 
-    fetch('${API_BASE}/api/auth/activate', {
+    fetch(`${API_BASE}/api/auth/activate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -434,7 +434,7 @@ function App() {
     e.preventDefault()
     setEmpFormError('')
 
-    fetch('${API_BASE}/api/employees', {
+    fetch(`${API_BASE}/api/employees`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -523,7 +523,7 @@ function App() {
 
     const url = showCustomerForm === 'edit'
       ? `${API_BASE}/api/customers/${selectedCustomer.id}`
-      : '${API_BASE}/api/customers'
+      : `${API_BASE}/api/customers`
 
     const method = showCustomerForm === 'edit' ? 'PUT' : 'POST'
 
@@ -596,7 +596,7 @@ function App() {
 
     const url = showProductForm === 'edit'
       ? `${API_BASE}/api/products/${selectedProduct.id}`
-      : '${API_BASE}/api/products'
+      : `${API_BASE}/api/products`
 
     const method = showProductForm === 'edit' ? 'PUT' : 'POST'
 
@@ -680,7 +680,7 @@ function App() {
       return
     }
 
-    fetch('${API_BASE}/api/challans', {
+    fetch(`${API_BASE}/api/challans`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
