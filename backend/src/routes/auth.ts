@@ -43,14 +43,48 @@ router.post('/activate', async (req: Request, res: Response, next: NextFunction)
 
     if (rows.length > 0) {
       const existing = rows[0]
-      if (existing.is_activated) {
-        return res.status(400).json({ status: 'error', message: 'Employee ID is already registered and approved.' })
-      } else {
-        return res.status(400).json({ status: 'error', message: 'Registration request is already pending Admin approval.' })
+
+      // If they already have a password set, they are already registered
+      if (existing.password !== null) {
+        if (existing.is_activated) {
+          return res.status(400).json({ status: 'error', message: 'Employee ID is already registered and approved.' })
+        } else {
+          return res.status(400).json({ status: 'error', message: 'Registration request is already pending Admin approval.' })
+        }
       }
+
+      // Record exists but password is null -> Pre-registered by Admin
+      // Validate that Name, Role, and Joining Date match the pre-registered record
+      const inputDate = new Date(joining_date).toISOString().split('T')[0]
+      const dbDate = new Date(existing.joining_date).toISOString().split('T')[0]
+
+      if (
+        existing.name.toLowerCase() !== name.toLowerCase() ||
+        dbDate !== inputDate ||
+        existing.role !== role
+      ) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Provided details (Name, Role, or Joining Date) do not match the pre-registered employee record.'
+        })
+      }
+
+      // Details match! Hash password, activate account immediately without Admin approval
+      const salt = await bcrypt.genSalt(10)
+      const hashedPassword = await bcrypt.hash(password, salt)
+
+      await db.query(
+        'UPDATE Employees SET password = ?, is_activated = true WHERE id = ?',
+        [hashedPassword, id]
+      )
+
+      return res.status(200).json({
+        status: 'success',
+        message: 'Account activated successfully! You can now log in.'
+      })
     }
 
-    // Hash password & save pending registration
+    // Hash password & save pending registration for new employees (requires approval)
     const salt = await bcrypt.genSalt(10)
     const hashedPassword = await bcrypt.hash(password, salt)
 
