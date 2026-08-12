@@ -2501,7 +2501,7 @@ function App() {
                                   onClick={() => window.print()}
                                   className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-bold text-center transition shadow-sm text-xs cursor-pointer flex items-center justify-center gap-1.5"
                                 >
-                                  ðŸ“„ Export Invoice as PDF
+                                  {'\uD83D\uDCC4'} Export Invoice as PDF
                                 </button>
 
                                 {/* Actions for Draft Challans */}
