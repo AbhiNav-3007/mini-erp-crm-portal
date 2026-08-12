@@ -74,7 +74,7 @@ router.get(
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
       const [rows]: any = await db.query(
-        'SELECT id, name, role, joining_date, is_activated, created_at FROM Employees ORDER BY created_at DESC'
+        'SELECT id, name, role, joining_date, is_activated, created_at, (password IS NOT NULL) AS has_password FROM Employees ORDER BY created_at DESC'
       )
       res.status(200).json({ status: 'success', data: rows })
     } catch (error) {

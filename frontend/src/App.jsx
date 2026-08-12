@@ -2716,6 +2716,10 @@ function App() {
                                     <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-green-100 text-green-800">
                                       Activated
                                     </span>
+                                  ) : !emp.has_password ? (
+                                    <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-blue-50 border border-blue-200 text-blue-700">
+                                      Pre-registered
+                                    </span>
                                   ) : (
                                     <>
                                       <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-slate-200 text-slate-800">
