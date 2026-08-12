@@ -11,24 +11,29 @@ router.post(
   authorizeRoles('Admin', 'Sales'),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
+      const companyId = req.user?.company_id
       const { name, mobile_number, email, business_name, gst_number, customer_type, address, status, follow_up_date, notes } = req.body
+
+      if (!companyId) {
+        return res.status(401).json({ status: 'error', message: 'Company context missing' })
+      }
 
       if (!name || !mobile_number || !email || !business_name || !customer_type || !address) {
         return res.status(400).json({ status: 'error', message: 'Missing required customer fields' })
       }
 
       const [insertResult]: any = await db.query(
-        `INSERT INTO Customers (name, mobile_number, email, business_name, gst_number, customer_type, address, status, follow_up_date, notes) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [name, mobile_number, email, business_name, gst_number || null, customer_type, address, status || 'Lead', follow_up_date || null, notes || null]
+        `INSERT INTO Customers (company_id, name, mobile_number, email, business_name, gst_number, customer_type, address, status, follow_up_date, notes) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [companyId, name, mobile_number, email, business_name, gst_number || null, customer_type, address, status || 'Lead', follow_up_date || null, notes || null]
       )
       const customerId = insertResult.insertId
 
       // System Audit Log
       await db.query(
-        `INSERT INTO AuditLogs (table_name, record_id, field_name, old_value, new_value, changed_by) 
-         VALUES ('Customers', ?, 'CREATE', '', ?, ?)`,
-        [customerId.toString(), `Created Customer ${name} (${business_name})`, req.user?.id]
+        `INSERT INTO AuditLogs (company_id, table_name, record_id, field_name, old_value, new_value, changed_by) 
+         VALUES (?, 'Customers', ?, 'CREATE', '', ?, ?)`,
+        [companyId, customerId.toString(), `Created Customer ${name} (${business_name})`, req.user?.id]
       )
 
       res.status(201).json({ status: 'success', message: 'Customer record created successfully' })
@@ -44,6 +49,7 @@ router.get(
   authenticateToken,
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
+      const companyId = req.user?.company_id
       const search = req.query.search as string || ''
       const page = parseInt(req.query.page as string) || 1
       const limit = parseInt(req.query.limit as string) || 10
@@ -54,16 +60,16 @@ router.get(
       // Query customers matching search filter on name or business name
       const [rows]: any = await db.query(
         `SELECT * FROM Customers 
-         WHERE name LIKE ? OR business_name LIKE ? 
+         WHERE company_id = ? AND (name LIKE ? OR business_name LIKE ?) 
          ORDER BY created_at DESC 
          LIMIT ? OFFSET ?`,
-        [searchQuery, searchQuery, limit, offset]
+        [companyId, searchQuery, searchQuery, limit, offset]
       )
 
       // Total count for pagination
       const [countRows]: any = await db.query(
-        `SELECT COUNT(*) as total FROM Customers WHERE name LIKE ? OR business_name LIKE ?`,
-        [searchQuery, searchQuery]
+        `SELECT COUNT(*) as total FROM Customers WHERE company_id = ? AND (name LIKE ? OR business_name LIKE ?)`,
+        [companyId, searchQuery, searchQuery]
       )
       const total = countRows[0].total
 
@@ -89,7 +95,8 @@ router.get(
   authenticateToken,
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const [rows]: any = await db.query('SELECT * FROM Customers WHERE id = ?', [req.params.id])
+      const companyId = req.user?.company_id
+      const [rows]: any = await db.query('SELECT * FROM Customers WHERE id = ? AND company_id = ?', [req.params.id, companyId])
       if (rows.length === 0) {
         return res.status(404).json({ status: 'error', message: 'Customer record not found' })
       }
@@ -107,13 +114,14 @@ router.put(
   authorizeRoles('Admin', 'Sales'),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
+      const companyId = req.user?.company_id
       const { name, mobile_number, email, business_name, gst_number, customer_type, address, status, follow_up_date, notes } = req.body
 
       if (!name || !mobile_number || !email || !business_name || !customer_type || !address) {
         return res.status(400).json({ status: 'error', message: 'Missing required customer fields' })
       }
 
-      const [existing]: any = await db.query('SELECT * FROM Customers WHERE id = ?', [req.params.id])
+      const [existing]: any = await db.query('SELECT * FROM Customers WHERE id = ? AND company_id = ?', [req.params.id, companyId])
       if (existing.length === 0) {
         return res.status(404).json({ status: 'error', message: 'Customer record not found' })
       }
@@ -134,9 +142,9 @@ router.put(
 
         if (oldVal !== newVal) {
           await db.query(
-            `INSERT INTO AuditLogs (table_name, record_id, field_name, old_value, new_value, changed_by) 
-             VALUES ('Customers', ?, ?, ?, ?, ?)`,
-            [req.params.id, field, oldVal, newVal, req.user?.id]
+            `INSERT INTO AuditLogs (company_id, table_name, record_id, field_name, old_value, new_value, changed_by) 
+             VALUES (?, 'Customers', ?, ?, ?, ?, ?)`,
+            [companyId, req.params.id, field, oldVal, newVal, req.user?.id]
           )
         }
       }
@@ -144,8 +152,8 @@ router.put(
       await db.query(
         `UPDATE Customers 
          SET name = ?, mobile_number = ?, email = ?, business_name = ?, gst_number = ?, customer_type = ?, address = ?, status = ?, follow_up_date = ?, notes = ? 
-         WHERE id = ?`,
-        [name, mobile_number, email, business_name, gst_number || null, customer_type, address, status, follow_up_date || null, notes || null, req.params.id]
+         WHERE id = ? AND company_id = ?`,
+        [name, mobile_number, email, business_name, gst_number || null, customer_type, address, status, follow_up_date || null, notes || null, req.params.id, companyId]
       )
 
       res.status(200).json({ status: 'success', message: 'Customer details updated successfully' })
@@ -162,6 +170,7 @@ router.post(
   authorizeRoles('Admin', 'Sales'),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
+      const companyId = req.user?.company_id
       const { note } = req.body
       const customerId = req.params.customerId
 
@@ -170,21 +179,21 @@ router.post(
       }
 
       // Verify customer exists
-      const [customer]: any = await db.query('SELECT * FROM Customers WHERE id = ?', [customerId])
+      const [customer]: any = await db.query('SELECT * FROM Customers WHERE id = ? AND company_id = ?', [customerId, companyId])
       if (customer.length === 0) {
         return res.status(404).json({ status: 'error', message: 'Customer not found' })
       }
 
       await db.query(
-        'INSERT INTO FollowUpNotes (customer_id, employee_id, note) VALUES (?, ?, ?)',
-        [customerId, req.user?.id, note]
+        'INSERT INTO FollowUpNotes (company_id, customer_id, employee_id, note) VALUES (?, ?, ?, ?)',
+        [companyId, customerId, req.user?.id, note]
       )
 
       // System Audit Log
       await db.query(
-        `INSERT INTO AuditLogs (table_name, record_id, field_name, old_value, new_value, changed_by) 
-         VALUES ('FollowUpNotes', ?, 'ADD_NOTE', '', ?, ?)`,
-        [customerId, `Added follow-up note: ${note.substring(0, 80)}`, req.user?.id]
+        `INSERT INTO AuditLogs (company_id, table_name, record_id, field_name, old_value, new_value, changed_by) 
+         VALUES (?, 'FollowUpNotes', ?, 'ADD_NOTE', '', ?, ?)`,
+        [companyId, customerId, `Added follow-up note: ${note.substring(0, 80)}`, req.user?.id]
       )
 
       res.status(201).json({ status: 'success', message: 'Follow-up note saved successfully' })
@@ -200,10 +209,11 @@ router.get(
   authenticateToken,
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
+      const companyId = req.user?.company_id
       const customerId = req.params.customerId
 
       // Verify customer exists
-      const [customer]: any = await db.query('SELECT * FROM Customers WHERE id = ?', [customerId])
+      const [customer]: any = await db.query('SELECT * FROM Customers WHERE id = ? AND company_id = ?', [customerId, companyId])
       if (customer.length === 0) {
         return res.status(404).json({ status: 'error', message: 'Customer not found' })
       }
@@ -212,10 +222,10 @@ router.get(
       const [notes]: any = await db.query(
         `SELECT f.id, f.note, f.created_at, e.name AS employee_name 
          FROM FollowUpNotes f 
-         JOIN Employees e ON f.employee_id = e.id 
-         WHERE f.customer_id = ? 
+         JOIN Employees e ON f.employee_id = e.id AND f.company_id = e.company_id
+         WHERE f.customer_id = ? AND f.company_id = ?
          ORDER BY f.created_at DESC`,
-        [customerId]
+        [customerId, companyId]
       )
 
       res.status(200).json({ status: 'success', data: notes })

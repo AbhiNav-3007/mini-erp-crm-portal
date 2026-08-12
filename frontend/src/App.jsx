@@ -26,6 +26,18 @@ function App() {
   const [loginPassword, setLoginPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [loginError, setLoginError] = useState('')
+  const [loginCompanyId, setLoginCompanyId] = useState('')
+  const [actCompanyId, setActCompanyId] = useState('')
+
+  // Company Registration States
+  const [regCompanyName, setRegCompanyName] = useState('')
+  const [regAdminId, setRegAdminId] = useState('')
+  const [regAdminName, setRegAdminName] = useState('')
+  const [regAdminPassword, setRegAdminPassword] = useState('')
+  const [regAdminJoiningDate, setRegAdminJoiningDate] = useState('')
+  const [showRegPassword, setShowRegPassword] = useState(false)
+  const [regError, setRegError] = useState('')
+  const [regSuccess, setRegSuccess] = useState('')
 
   const [actRole, setActRole] = useState('Sales')
   const [actId, setActId] = useState('')
@@ -375,7 +387,7 @@ function App() {
     fetch(`${API_BASE}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: loginId, password: loginPassword, role: selectedRole })
+      body: JSON.stringify({ companyId: loginCompanyId, id: loginId, password: loginPassword, role: selectedRole })
     })
       .then((res) => res.json())
       .then((data) => {
@@ -387,6 +399,7 @@ function App() {
           setDashboardSubTab('summary')
           // Keep inputs populated momentarily so browser password managers capture the submission successfully
           setTimeout(() => {
+            setLoginCompanyId('')
             setLoginId('')
             setLoginPassword('')
           }, 1000)
@@ -408,6 +421,7 @@ function App() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        companyId: actCompanyId,
         id: actId,
         name: actName,
         role: actRole,
@@ -419,6 +433,7 @@ function App() {
       .then((data) => {
         if (data.status === 'success') {
           setActSuccess(data.message)
+          setActCompanyId('')
           setActId('')
           setActName('')
           setActDate('')
@@ -428,6 +443,39 @@ function App() {
         }
       })
       .catch(() => setActError('Failed to connect to activation service'))
+  }
+
+  // Company/Business Registration Action
+  const handleRegisterCompany = (e) => {
+    e.preventDefault()
+    setRegError('')
+    setRegSuccess('')
+
+    fetch(`${API_BASE}/api/auth/register-company`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        companyName: regCompanyName,
+        adminId: regAdminId,
+        adminName: regAdminName,
+        adminPassword: regAdminPassword,
+        adminJoiningDate: regAdminJoiningDate
+      })
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.status === 'success') {
+          setRegSuccess(data.message)
+          setRegCompanyName('')
+          setRegAdminId('')
+          setRegAdminName('')
+          setRegAdminPassword('')
+          setRegAdminJoiningDate('')
+        } else {
+          setRegError(data.message)
+        }
+      })
+      .catch(() => setRegError('Failed to connect to business registration service'))
   }
 
   // Pre-register Employee Action (Admin-Only)
@@ -1012,7 +1060,7 @@ function App() {
             >
               {darkMode ? '\u2600\ufe0f Light' : '\uD83C\uDF19 Dark'}
             </button>
-            {!token ? (
+             {!token ? (
               <>
                 <button
                   onClick={() => navigateTo('landing')}
@@ -1031,6 +1079,14 @@ function App() {
                   Sign In
                 </button>
                 <button
+                  onClick={() => navigateTo('register-business')}
+                  className={`px-3 py-1.5 rounded text-sm font-medium transition ${
+                    activeTab === 'register-business' ? 'text-slate-800 bg-slate-200' : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  Register Business
+                </button>
+                <button
                   onClick={() => navigateTo('activate')}
                   className="px-3 py-1.5 rounded text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white transition"
                 >
@@ -1040,7 +1096,7 @@ function App() {
             ) : (
               <div className="flex items-center gap-4">
                 <span className="text-xs font-bold text-slate-500 bg-slate-100 border border-slate-200 px-2.5 py-1 rounded">
-                  {user?.role}: {user?.name || user?.id}
+                  {user?.company_name || 'ERP Portal'} • {user?.role}: {user?.name || user?.id}
                 </span>
                 <button
                   onClick={handleLogout}
@@ -1116,9 +1172,7 @@ function App() {
               </div>
             </div>
           </div>
-        )}
-
-        {/* Login Page */}
+        )}        {/* Login Page */}
         {activeTab === 'login' && (
           <div className="max-w-md mx-auto bg-white border border-slate-200 p-8 rounded-xl shadow-md hover:shadow-lg transition-all duration-300 space-y-6 text-left">
             <div className="text-center space-y-2">
@@ -1146,6 +1200,19 @@ function App() {
             {loginError && <p className="text-sm text-red-600 bg-red-50 border border-red-200 p-3 rounded-lg text-center font-medium">{loginError}</p>}
 
             <form onSubmit={handleLogin} className="space-y-4" action="#" method="POST">
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
+                  Company ID
+                </label>
+                <input
+                  type="number"
+                  required
+                  value={loginCompanyId}
+                  onChange={(e) => setLoginCompanyId(e.target.value)}
+                  placeholder="e.g. 1"
+                  className="w-full bg-white border border-slate-300 rounded-lg px-3.5 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition"
+                />
+              </div>
               <div>
                 <label htmlFor="username" className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
                   Employee ID
@@ -1218,6 +1285,19 @@ function App() {
             {actSuccess && <p className="text-sm text-green-600 bg-green-50 border border-green-200 p-3 rounded-lg text-center font-medium">{actSuccess}</p>}
 
             <form onSubmit={handleActivate} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
+                  Company ID
+                </label>
+                <input
+                  type="number"
+                  required
+                  value={actCompanyId}
+                  onChange={(e) => setActCompanyId(e.target.value)}
+                  placeholder="Company ID e.g. 1"
+                  className="w-full bg-white border border-slate-300 rounded-lg px-3.5 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition"
+                />
+              </div>
               <div>
                 <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
                   Role Profile
@@ -1302,6 +1382,112 @@ function App() {
                 Activate Account
               </button>
             </form>
+          </div>
+        )}
+
+        {/* Register Business Page */}
+        {activeTab === 'register-business' && (
+          <div className="max-w-md mx-auto bg-white border border-slate-200 p-8 rounded-xl shadow-md hover:shadow-lg transition-all duration-300 space-y-6 text-left">
+            <div className="text-center space-y-2">
+              <h2 className="text-2xl font-extrabold text-slate-900">Register Business</h2>
+              <p className="text-sm text-slate-500">Create a new company tenant and administrator profile</p>
+            </div>
+
+            {regError && <p className="text-sm text-red-600 bg-red-50 border border-red-200 p-3 rounded-lg text-center font-medium">{regError}</p>}
+            {regSuccess && <p className="text-sm text-green-600 bg-green-50 border border-green-200 p-3 rounded-lg text-center font-medium">{regSuccess}</p>}
+
+            <form onSubmit={handleRegisterCompany} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
+                  Company Name
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={regCompanyName}
+                  onChange={(e) => setRegCompanyName(e.target.value)}
+                  placeholder="e.g. Apex Distribution"
+                  className="w-full bg-white border border-slate-300 rounded-lg px-3.5 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition"
+                />
+              </div>
+              <hr className="border-slate-200" />
+              <p className="text-xs font-bold text-slate-550 uppercase tracking-wider">Initial Administrator Profile</p>
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
+                  Admin Employee ID
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={regAdminId}
+                  onChange={(e) => setRegAdminId(e.target.value)}
+                  placeholder="Must start with AD- (e.g., AD-001)"
+                  className="w-full bg-white border border-slate-300 rounded-lg px-3.5 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
+                  Admin Full Name
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={regAdminName}
+                  onChange={(e) => setRegAdminName(e.target.value)}
+                  placeholder="Official name"
+                  className="w-full bg-white border border-slate-300 rounded-lg px-3.5 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
+                  Joining Date
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={regAdminJoiningDate}
+                  onChange={(e) => setRegAdminJoiningDate(e.target.value)}
+                  className="w-full bg-white border border-slate-300 rounded-lg px-3.5 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition text-slate-650"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
+                  Password
+                </label>
+                <input
+                  type={showRegPassword ? 'text' : 'password'}
+                  required
+                  value={regAdminPassword}
+                  onChange={(e) => setRegAdminPassword(e.target.value)}
+                  placeholder="Minimum 6 characters"
+                  className="w-full bg-white border border-slate-300 rounded-lg px-3.5 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition"
+                />
+              </div>
+
+              <div className="flex items-center gap-2 pt-1">
+                <input
+                  type="checkbox"
+                  id="toggle-reg-pass"
+                  checked={showRegPassword}
+                  onChange={() => setShowRegPassword(!showRegPassword)}
+                  className="w-4 h-4 border border-slate-300 rounded"
+                />
+                <label htmlFor="toggle-reg-pass" className="text-sm text-slate-500 font-medium cursor-pointer select-none">
+                  See Password
+                </label>
+              </div>
+
+              <button type="submit" className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition shadow-sm text-base cursor-pointer">
+                Register Business & Admin
+              </button>
+            </form>
+
+            <p className="text-center text-sm text-slate-500 pt-2">
+              Already registered? 
+              <span className="text-blue-600 font-semibold cursor-pointer hover:underline ml-1" onClick={() => navigateTo('login')}>
+                Sign in here
+              </span>
+            </p>
           </div>
         )}
 

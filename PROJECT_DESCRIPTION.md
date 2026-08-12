@@ -411,7 +411,20 @@ The project will be developed in small practical stages. Each stage is implement
   * *After completion*:
     - Document public URLs and AWS cloud architecture.
 
-* **Phase 24 — Final QA and Project Presentation**:
+* **Phase 24 — Multi-Tenant SaaS Conversion**:
+  * *Build*:
+    - Upgrade the database schema with a `Companies` table and add `company_id` column to all tables.
+    - Implement company registration (`/register-company`) and scoped login/activation routes.
+    - Filter all backend queries by `company_id` derived from the user's JWT.
+    - Update frontend with company sign-up forms and scoped auth credentials.
+  * *Understand*:
+    - Database partitioning, SaaS multi-tenancy, JWT-based tenant extraction, data isolation, and schema migrations.
+  * *Test*:
+    - Verify Company A and Company B have completely isolated data (e.g. employee IDs and products do not collide).
+  * *After completion*:
+    - Document company registration flow, API changes, and multi-tenant schema diagrams.
+
+* **Phase 25 — Final QA and Project Presentation**:
   * *Build*:
     - Write final README, build Postman collections, prepare test credentials, clean repository.
   * *Test*:

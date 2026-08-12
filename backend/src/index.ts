@@ -65,6 +65,43 @@ app.use(errorHandler)
 app.listen(PORT, async () => {
   console.log(`[Server] Running on http://localhost:${PORT}`)
   try {
+    // Check if database needs a reset from single-tenant to multi-tenant schema
+    let needsReset = false
+    try {
+      const [tableExists]: any = await db.query("SHOW TABLES LIKE 'Employees'")
+      if (tableExists.length > 0) {
+        const [columns]: any = await db.query("SHOW COLUMNS FROM Employees LIKE 'company_id'")
+        if (columns.length === 0) {
+          needsReset = true
+          console.log('[Server] Old single-tenant schema detected. Upgrading database to multi-tenant...')
+        }
+      }
+    } catch (e) {
+      // Employees table does not exist, which is fine
+    }
+
+    if (needsReset) {
+      const tablesToDrop = [
+        'ChallanItems',
+        'Challans',
+        'StockMovements',
+        'FollowUpNotes',
+        'Products',
+        'Customers',
+        'Employees',
+        'Companies',
+        'AuditLogs'
+      ]
+      // Drop tables in dependency order
+      for (const table of tablesToDrop) {
+        try {
+          await db.query(`DROP TABLE IF EXISTS ${table}`)
+        } catch (err: any) {
+          console.warn(`[Server] Failed to drop table ${table}:`, err.message)
+        }
+      }
+    }
+
     const schemaPath = path.join(process.cwd(), 'schema.sql')
     if (fs.existsSync(schemaPath)) {
       console.log('[Server] Initializing database schema from schema.sql...')
@@ -90,6 +127,7 @@ app.listen(PORT, async () => {
     await db.query(`
       CREATE TABLE IF NOT EXISTS AuditLogs (
         id INT AUTO_INCREMENT PRIMARY KEY,
+        company_id INT NOT NULL,
         table_name VARCHAR(50) NOT NULL,
         record_id VARCHAR(50) NOT NULL,
         field_name VARCHAR(50) NOT NULL,
@@ -97,7 +135,8 @@ app.listen(PORT, async () => {
         new_value TEXT NOT NULL,
         changed_by VARCHAR(50) NOT NULL,
         timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (changed_by) REFERENCES Employees(id)
+        FOREIGN KEY (company_id) REFERENCES Companies(id) ON DELETE CASCADE,
+        FOREIGN KEY (changed_by, company_id) REFERENCES Employees(id, company_id) ON DELETE CASCADE
       )
     `)
     console.log('[Server] Database AuditLogs table verified successfully.')

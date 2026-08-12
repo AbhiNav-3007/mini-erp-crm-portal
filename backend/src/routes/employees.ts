@@ -24,6 +24,11 @@ router.post(
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
       const { id, name, role, joining_date } = req.body
+      const companyId = req.user?.company_id
+
+      if (!companyId) {
+        return res.status(401).json({ status: 'error', message: 'Company context missing' })
+      }
 
       if (!id || !name || !role || !joining_date) {
         return res.status(400).json({ status: 'error', message: 'All fields are required' })
@@ -37,23 +42,23 @@ router.post(
         })
       }
 
-      // Check unique
-      const [existing]: any = await db.query('SELECT * FROM Employees WHERE id = ?', [id])
+      // Check unique within this company
+      const [existing]: any = await db.query('SELECT * FROM Employees WHERE id = ? AND company_id = ?', [id, companyId])
       if (existing.length > 0) {
-        return res.status(400).json({ status: 'error', message: 'Employee ID is already registered' })
+        return res.status(400).json({ status: 'error', message: 'Employee ID is already registered in this company' })
       }
 
       // Insert record
       await db.query(
-        'INSERT INTO Employees (id, name, role, joining_date, is_activated) VALUES (?, ?, ?, ?, false)',
-        [id, name, role, joining_date]
+        'INSERT INTO Employees (id, company_id, name, role, joining_date, is_activated) VALUES (?, ?, ?, ?, ?, false)',
+        [id, companyId, name, role, joining_date]
       )
 
       // Audit Log pre-registration
       await db.query(
-        `INSERT INTO AuditLogs (table_name, record_id, field_name, old_value, new_value, changed_by) 
-         VALUES ('Employees', ?, 'PRE_REGISTER', '', ?, ?)`,
-        [id, `Pre-registered ${name} as ${role}`, req.user?.id]
+        `INSERT INTO AuditLogs (company_id, table_name, record_id, field_name, old_value, new_value, changed_by) 
+         VALUES (?, 'Employees', ?, 'PRE_REGISTER', '', ?, ?)`,
+        [companyId, id, `Pre-registered ${name} as ${role}`, req.user?.id]
       )
 
       res.status(201).json({
@@ -73,8 +78,13 @@ router.get(
   authorizeRoles('Admin'),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
+      const companyId = req.user?.company_id
       const [rows]: any = await db.query(
-        'SELECT id, name, role, joining_date, is_activated, created_at, (password IS NOT NULL) AS has_password FROM Employees ORDER BY created_at DESC'
+        `SELECT id, name, role, joining_date, is_activated, created_at, (password IS NOT NULL) AS has_password 
+         FROM Employees 
+         WHERE company_id = ? 
+         ORDER BY created_at DESC`,
+        [companyId]
       )
       res.status(200).json({ status: 'success', data: rows })
     } catch (error) {
@@ -91,20 +101,21 @@ router.post(
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
       const employeeId = req.params.id
+      const companyId = req.user?.company_id
 
       // Verify exists
-      const [rows]: any = await db.query('SELECT * FROM Employees WHERE id = ?', [employeeId])
+      const [rows]: any = await db.query('SELECT * FROM Employees WHERE id = ? AND company_id = ?', [employeeId, companyId])
       if (rows.length === 0) {
-        return res.status(404).json({ status: 'error', message: 'Employee request not found' })
+        return res.status(404).json({ status: 'error', message: 'Employee request not found in this company' })
       }
 
-      await db.query('UPDATE Employees SET is_activated = true WHERE id = ?', [employeeId])
+      await db.query('UPDATE Employees SET is_activated = true WHERE id = ? AND company_id = ?', [employeeId, companyId])
 
       // Audit Log approval
       await db.query(
-        `INSERT INTO AuditLogs (table_name, record_id, field_name, old_value, new_value, changed_by) 
-         VALUES ('Employees', ?, 'APPROVE_REGISTRATION', 'Pending', 'Approved', ?)`,
-        [employeeId, req.user?.id]
+        `INSERT INTO AuditLogs (company_id, table_name, record_id, field_name, old_value, new_value, changed_by) 
+         VALUES (?, 'Employees', ?, 'APPROVE_REGISTRATION', 'Pending', 'Approved', ?)`,
+        [companyId, employeeId, req.user?.id]
       )
 
       res.status(200).json({ status: 'success', message: 'Employee registration approved successfully' })
@@ -121,11 +132,14 @@ router.get(
   authorizeRoles('Admin'),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
+      const companyId = req.user?.company_id
       const [rows]: any = await db.query(
         `SELECT al.id, al.table_name, al.record_id, al.field_name, al.old_value, al.new_value, al.timestamp, e.name AS employee_name, e.role AS employee_role 
          FROM AuditLogs al 
-         JOIN Employees e ON al.changed_by = e.id 
-         ORDER BY al.timestamp DESC`
+         JOIN Employees e ON al.changed_by = e.id AND al.company_id = e.company_id
+         WHERE al.company_id = ?
+         ORDER BY al.timestamp DESC`,
+        [companyId]
       )
       res.status(200).json({ status: 'success', data: rows })
     } catch (error) {
@@ -142,27 +156,28 @@ router.delete(
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
       const employeeId = req.params.id
+      const companyId = req.user?.company_id
 
       if (employeeId === req.user?.id) {
         return res.status(400).json({ status: 'error', message: 'Cannot delete your own active administrator profile' })
       }
 
       // Check if employee exists
-      const [rows]: any = await db.query('SELECT * FROM Employees WHERE id = ?', [employeeId])
+      const [rows]: any = await db.query('SELECT * FROM Employees WHERE id = ? AND company_id = ?', [employeeId, companyId])
       if (rows.length === 0) {
-        return res.status(404).json({ status: 'error', message: 'Employee record not found' })
+        return res.status(404).json({ status: 'error', message: 'Employee record not found in this company' })
       }
 
       const empName = rows[0].name
 
       // Delete employee
-      await db.query('DELETE FROM Employees WHERE id = ?', [employeeId])
+      await db.query('DELETE FROM Employees WHERE id = ? AND company_id = ?', [employeeId, companyId])
 
       // Audit Log deletion
       await db.query(
-        `INSERT INTO AuditLogs (table_name, record_id, field_name, old_value, new_value, changed_by) 
-         VALUES ('Employees', ?, 'DELETE', ?, 'Deleted', ?)`,
-        [employeeId, `Deleted profile: ${empName}`, req.user?.id]
+        `INSERT INTO AuditLogs (company_id, table_name, record_id, field_name, old_value, new_value, changed_by) 
+         VALUES (?, 'Employees', ?, 'DELETE', ?, 'Deleted', ?)`,
+        [companyId, employeeId, `Deleted profile: ${empName}`, req.user?.id]
       )
 
       res.status(200).json({ status: 'success', message: 'Employee profile deleted successfully' })

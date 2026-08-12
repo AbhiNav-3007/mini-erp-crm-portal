@@ -12,7 +12,12 @@ router.post(
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     const connection = await db.getConnection()
     try {
+      const companyId = req.user?.company_id
       const { customer_id, items } = req.body // items is array of { product_id, quantity, unit_price }
+
+      if (!companyId) {
+        return res.status(401).json({ status: 'error', message: 'Company context missing' })
+      }
 
       if (!customer_id || !items || !Array.isArray(items) || items.length === 0) {
         return res.status(400).json({ status: 'error', message: 'Customer ID and product items are required' })
@@ -26,17 +31,17 @@ router.post(
 
       // Insert Challan header record
       const [challanResult]: any = await connection.query(
-        `INSERT INTO Challans (challan_number, customer_id, status, total_quantity, created_by) 
-         VALUES (?, ?, 'Draft', ?, ?)`,
-        [challanNumber, customer_id, totalQuantity, req.user?.id]
+        `INSERT INTO Challans (company_id, challan_number, customer_id, status, total_quantity, created_by) 
+         VALUES (?, ?, ?, 'Draft', ?, ?)`,
+        [companyId, challanNumber, customer_id, totalQuantity, req.user?.id]
       )
       const challanId = challanResult.insertId
 
       // System Audit Log draft creation
       await connection.query(
-        `INSERT INTO AuditLogs (table_name, record_id, field_name, old_value, new_value, changed_by) 
-         VALUES ('Challans', ?, 'CREATE_DRAFT', '', ?, ?)`,
-        [challanId.toString(), `Created Challan ${challanNumber} (Draft)`, req.user?.id]
+        `INSERT INTO AuditLogs (company_id, table_name, record_id, field_name, old_value, new_value, changed_by) 
+         VALUES (?, 'Challans', ?, 'CREATE_DRAFT', '', ?, ?)`,
+        [companyId, challanId.toString(), `Created Challan ${challanNumber} (Draft)`, req.user?.id]
       )
 
       // Insert Challan nested items
@@ -46,11 +51,11 @@ router.post(
         }
 
         const [products]: any = await connection.query(
-          'SELECT name, current_stock FROM Products WHERE id = ?',
-          [item.product_id]
+          'SELECT name, current_stock FROM Products WHERE id = ? AND company_id = ?',
+          [item.product_id, companyId]
         )
         if (products.length === 0) {
-          throw new Error('Product not found')
+          throw new Error('Product not found in this company')
         }
         const product = products[0]
         if (product.current_stock < item.quantity) {
@@ -85,6 +90,7 @@ router.get(
   authenticateToken,
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
+      const companyId = req.user?.company_id
       const statusFilter = req.query.status as string || ''
       const page = parseInt(req.query.page as string) || 1
       const limit = parseInt(req.query.limit as string) || 10
@@ -93,15 +99,21 @@ router.get(
       let query = `
         SELECT c.id, c.challan_number, c.status, c.total_quantity, c.created_at, cust.name AS customer_name, e.name AS creator_name 
         FROM Challans c
-        JOIN Customers cust ON c.customer_id = cust.id
-        JOIN Employees e ON c.created_by = e.id
+        JOIN Customers cust ON c.customer_id = cust.id AND c.company_id = cust.company_id
+        JOIN Employees e ON c.created_by = e.id AND c.company_id = e.company_id
+        WHERE c.company_id = ?
       `
-      let countQuery = `SELECT COUNT(*) as total FROM Challans c JOIN Customers cust ON c.customer_id = cust.id`
-      const queryParams: any[] = []
+      let countQuery = `
+        SELECT COUNT(*) as total 
+        FROM Challans c 
+        JOIN Customers cust ON c.customer_id = cust.id AND c.company_id = cust.company_id
+        WHERE c.company_id = ?
+      `
+      const queryParams: any[] = [companyId]
 
       if (statusFilter) {
-        query += ' WHERE c.status = ?'
-        countQuery += ' WHERE c.status = ?'
+        query += ' AND c.status = ?'
+        countQuery += ' AND c.status = ?'
         queryParams.push(statusFilter)
       }
 
@@ -134,6 +146,7 @@ router.get(
   authenticateToken,
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
+      const companyId = req.user?.company_id
       const challanId = req.params.id
 
       // Fetch challan header details
@@ -145,10 +158,10 @@ router.get(
                 cust.address AS customer_address, cust.status AS customer_status,
                 e.name AS creator_name 
          FROM Challans c
-         JOIN Customers cust ON c.customer_id = cust.id
-         JOIN Employees e ON c.created_by = e.id
-         WHERE c.id = ?`,
-        [challanId]
+         JOIN Customers cust ON c.customer_id = cust.id AND c.company_id = cust.company_id
+         JOIN Employees e ON c.created_by = e.id AND c.company_id = e.company_id
+         WHERE c.id = ? AND c.company_id = ?`,
+        [challanId, companyId]
       )
 
       if (challanRows.length === 0) {
@@ -160,8 +173,8 @@ router.get(
         `SELECT ci.id, ci.quantity, ci.unit_price, p.name AS product_name, p.sku AS product_sku 
          FROM ChallanItems ci 
          JOIN Products p ON ci.product_id = p.id 
-         WHERE ci.challan_id = ?`,
-        [challanId]
+         WHERE ci.challan_id = ? AND p.company_id = ?`,
+        [challanId, companyId]
       )
 
       res.status(200).json({
@@ -185,14 +198,15 @@ router.post(
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     const connection = await db.getConnection()
     try {
+      const companyId = req.user?.company_id
       const challanId = req.params.id
 
       await connection.beginTransaction()
 
       // 1. Check Challan exists and is still in Draft status
       const [challans]: any = await connection.query(
-        'SELECT * FROM Challans WHERE id = ? FOR UPDATE',
-        [challanId]
+        'SELECT * FROM Challans WHERE id = ? AND company_id = ? FOR UPDATE',
+        [challanId, companyId]
       )
 
       if (challans.length === 0) {
@@ -206,15 +220,18 @@ router.post(
 
       // 2. Fetch all nested challan items
       const [items]: any = await connection.query(
-        'SELECT * FROM ChallanItems WHERE challan_id = ?',
-        [challanId]
+        `SELECT ci.* 
+         FROM ChallanItems ci 
+         JOIN Products p ON ci.product_id = p.id
+         WHERE ci.challan_id = ? AND p.company_id = ?`,
+        [challanId, companyId]
       )
 
       // 3. Verify stock levels for each item and update stock
       for (const item of items) {
         const [products]: any = await connection.query(
-          'SELECT name, current_stock FROM Products WHERE id = ? FOR UPDATE',
-          [item.product_id]
+          'SELECT name, current_stock FROM Products WHERE id = ? AND company_id = ? FOR UPDATE',
+          [item.product_id, companyId]
         )
 
         if (products.length === 0) {
@@ -228,15 +245,16 @@ router.post(
 
         // Deduct inventory stock levels
         await connection.query(
-          'UPDATE Products SET current_stock = current_stock - ? WHERE id = ?',
-          [item.quantity, item.product_id]
+          'UPDATE Products SET current_stock = current_stock - ? WHERE id = ? AND company_id = ?',
+          [item.quantity, item.product_id, companyId]
         )
 
         // Log Stock OUT movement
         await connection.query(
-          `INSERT INTO StockMovements (product_id, quantity, movement_type, reason, created_by) 
-           VALUES (?, ?, 'OUT', ?, ?)`,
+          `INSERT INTO StockMovements (company_id, product_id, quantity, movement_type, reason, created_by) 
+           VALUES (?, ?, ?, 'OUT', ?, ?)`,
           [
+            companyId,
             item.product_id,
             item.quantity,
             `Automated sales deduction for confirmed challan: ${challan.challan_number}`,
@@ -247,15 +265,15 @@ router.post(
 
       // 4. Update Challan status to Confirmed
       await connection.query(
-        "UPDATE Challans SET status = 'Confirmed' WHERE id = ?",
-        [challanId]
+        "UPDATE Challans SET status = 'Confirmed' WHERE id = ? AND company_id = ?",
+        [challanId, companyId]
       )
 
       // System Audit Log confirmation
       await connection.query(
-        `INSERT INTO AuditLogs (table_name, record_id, field_name, old_value, new_value, changed_by) 
-         VALUES ('Challans', ?, 'CONFIRM', 'Draft', 'Confirmed', ?)`,
-        [challanId.toString(), req.user?.id]
+        `INSERT INTO AuditLogs (company_id, table_name, record_id, field_name, old_value, new_value, changed_by) 
+         VALUES (?, 'Challans', ?, 'CONFIRM', 'Draft', 'Confirmed', ?)`,
+        [companyId, challanId.toString(), req.user?.id]
       )
 
       await connection.commit()
@@ -277,14 +295,15 @@ router.post(
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     const connection = await db.getConnection()
     try {
+      const companyId = req.user?.company_id
       const challanId = req.params.id
 
       await connection.beginTransaction()
 
       // Fetch challan details
       const [challans]: any = await connection.query(
-        'SELECT * FROM Challans WHERE id = ? FOR UPDATE',
-        [challanId]
+        'SELECT * FROM Challans WHERE id = ? AND company_id = ? FOR UPDATE',
+        [challanId, companyId]
       )
 
       if (challans.length === 0) {
@@ -299,22 +318,26 @@ router.post(
       // If the challan was already confirmed, we need to return the deducted stock levels (reverse)
       if (challan.status === 'Confirmed') {
         const [items]: any = await connection.query(
-          'SELECT * FROM ChallanItems WHERE challan_id = ?',
-          [challanId]
+          `SELECT ci.* 
+           FROM ChallanItems ci 
+           JOIN Products p ON ci.product_id = p.id
+           WHERE ci.challan_id = ? AND p.company_id = ?`,
+          [challanId, companyId]
         )
 
         for (const item of items) {
           // Increment stock back
           await connection.query(
-            'UPDATE Products SET current_stock = current_stock + ? WHERE id = ?',
-            [item.quantity, item.product_id]
+            'UPDATE Products SET current_stock = current_stock + ? WHERE id = ? AND company_id = ?',
+            [item.quantity, item.product_id, companyId]
           )
 
           // Log Stock IN movement reversing the OUT movement
           await connection.query(
-            `INSERT INTO StockMovements (product_id, quantity, movement_type, reason, created_by) 
-             VALUES (?, ?, 'IN', ?, ?)`,
+            `INSERT INTO StockMovements (company_id, product_id, quantity, movement_type, reason, created_by) 
+             VALUES (?, ?, ?, 'IN', ?, ?)`,
             [
+              companyId,
               item.product_id,
               item.quantity,
               `Reversal: stock returned due to cancellation of confirmed challan ${challan.challan_number}`,
@@ -326,15 +349,15 @@ router.post(
 
       // Update status to Cancelled
       await connection.query(
-        "UPDATE Challans SET status = 'Cancelled' WHERE id = ?",
-        [challanId]
+        "UPDATE Challans SET status = 'Cancelled' WHERE id = ? AND company_id = ?",
+        [challanId, companyId]
       )
 
       // System Audit Log cancellation
       await connection.query(
-        `INSERT INTO AuditLogs (table_name, record_id, field_name, old_value, new_value, changed_by) 
-         VALUES ('Challans', ?, 'CANCEL', ?, 'Cancelled', ?)`,
-        [challanId.toString(), challan.status, req.user?.id]
+        `INSERT INTO AuditLogs (company_id, table_name, record_id, field_name, old_value, new_value, changed_by) 
+         VALUES (?, 'Challans', ?, 'CANCEL', ?, 'Cancelled', ?)`,
+        [companyId, challanId.toString(), challan.status, req.user?.id]
       )
 
       await connection.commit()
@@ -356,6 +379,7 @@ router.put(
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     const connection = await db.getConnection()
     try {
+      const companyId = req.user?.company_id
       const challanId = req.params.id
       const { items } = req.body // items is array of { id, product_id, quantity, unit_price }
 
@@ -367,8 +391,8 @@ router.put(
 
       // Fetch challan header
       const [challans]: any = await connection.query(
-        'SELECT * FROM Challans WHERE id = ? FOR UPDATE',
-        [challanId]
+        'SELECT * FROM Challans WHERE id = ? AND company_id = ? FOR UPDATE',
+        [challanId, companyId]
       )
 
       if (challans.length === 0) {
@@ -382,8 +406,11 @@ router.put(
 
       // Fetch existing challan items
       const [oldItems]: any = await connection.query(
-        'SELECT * FROM ChallanItems WHERE challan_id = ?',
-        [challanId]
+        `SELECT ci.* 
+         FROM ChallanItems ci 
+         JOIN Products p ON ci.product_id = p.id
+         WHERE ci.challan_id = ? AND p.company_id = ?`,
+        [challanId, companyId]
       )
 
       // Match items and record audits
@@ -404,9 +431,9 @@ router.put(
         if (oldQty !== newQty) {
           // Log quantity audit entry
           await connection.query(
-            `INSERT INTO AuditLogs (table_name, record_id, field_name, old_value, new_value, changed_by) 
-             VALUES ('ChallanItems', ?, 'quantity', ?, ?, ?)`,
-            [item.id.toString(), oldQty.toString(), newQty.toString(), req.user?.id]
+            `INSERT INTO AuditLogs (company_id, table_name, record_id, field_name, old_value, new_value, changed_by) 
+             VALUES (?, 'ChallanItems', ?, 'quantity', ?, ?, ?)`,
+            [companyId, item.id.toString(), oldQty.toString(), newQty.toString(), req.user?.id]
           )
 
           // If confirmed, adjust actual product stock
@@ -414,8 +441,8 @@ router.put(
             const qtyDiff = newQty - oldQty // positive means they increased challan qty (deduct more stock)
             
             const [products]: any = await connection.query(
-              'SELECT name, current_stock FROM Products WHERE id = ? FOR UPDATE',
-              [oldItem.product_id]
+              'SELECT name, current_stock FROM Products WHERE id = ? AND company_id = ? FOR UPDATE',
+              [oldItem.product_id, companyId]
             )
 
             if (products.length === 0) {
@@ -429,17 +456,18 @@ router.put(
 
             // Update stock
             await connection.query(
-              'UPDATE Products SET current_stock = current_stock - ? WHERE id = ?',
-              [qtyDiff, oldItem.product_id]
+              'UPDATE Products SET current_stock = current_stock - ? WHERE id = ? AND company_id = ?',
+              [qtyDiff, oldItem.product_id, companyId]
             )
 
             // Log stock movement
             const movementType = qtyDiff > 0 ? 'OUT' : 'IN'
             const movementQty = Math.abs(qtyDiff)
             await connection.query(
-              `INSERT INTO StockMovements (product_id, quantity, movement_type, reason, created_by) 
-               VALUES (?, ?, ?, ?, ?)`,
+              `INSERT INTO StockMovements (company_id, product_id, quantity, movement_type, reason, created_by) 
+               VALUES (?, ?, ?, ?, ?, ?)`,
               [
+                companyId,
                 oldItem.product_id,
                 movementQty,
                 movementType,
@@ -459,9 +487,9 @@ router.put(
         // 2. Audit Price Change
         if (oldPrice !== newPrice) {
           await connection.query(
-            `INSERT INTO AuditLogs (table_name, record_id, field_name, old_value, new_value, changed_by) 
-             VALUES ('ChallanItems', ?, 'unit_price', ?, ?, ?)`,
-            [item.id.toString(), oldPrice.toString(), newPrice.toString(), req.user?.id]
+            `INSERT INTO AuditLogs (company_id, table_name, record_id, field_name, old_value, new_value, changed_by) 
+             VALUES (?, 'ChallanItems', ?, 'unit_price', ?, ?, ?)`,
+            [companyId, item.id.toString(), oldPrice.toString(), newPrice.toString(), req.user?.id]
           )
 
           await connection.query(
@@ -479,8 +507,8 @@ router.put(
       const newTotalQty = sumRows[0].total_qty || 0
 
       await connection.query(
-        'UPDATE Challans SET total_quantity = ? WHERE id = ?',
-        [newTotalQty, challanId]
+        'UPDATE Challans SET total_quantity = ? WHERE id = ? AND company_id = ?',
+        [newTotalQty, challanId, companyId]
       )
 
       await connection.commit()

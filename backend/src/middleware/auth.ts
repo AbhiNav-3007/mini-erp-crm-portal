@@ -5,6 +5,7 @@ export interface AuthenticatedRequest extends Request {
   user?: {
     id: string
     role: 'Admin' | 'Sales' | 'Warehouse' | 'Accounts'
+    company_id: number
   }
 }
 
@@ -25,6 +26,7 @@ export const authenticateToken = (
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret') as {
       id: string
       role: 'Admin' | 'Sales' | 'Warehouse' | 'Accounts'
+      company_id: number
     }
     req.user = decoded
     next()

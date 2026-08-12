@@ -17,14 +17,66 @@ const isValidRolePrefix = (id: string, role: string): boolean => {
   return expectedPrefix ? id.startsWith(expectedPrefix) : false
 }
 
-// 1. Account Self-Registration API
+// 1. Company Registration API
+router.post('/register-company', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { companyName, adminId, adminName, adminPassword, adminJoiningDate } = req.body
+
+    if (!companyName || !adminId || !adminName || !adminPassword || !adminJoiningDate) {
+      return res.status(400).json({ status: 'error', message: 'All company and admin registration fields are required' })
+    }
+
+    if (!isValidRolePrefix(adminId, 'Admin')) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Mismatched profile ID: Admin Employee ID prefix must start with AD-'
+      })
+    }
+
+    // Check if company name already exists
+    const [existingCompany]: any = await db.query('SELECT * FROM Companies WHERE name = ?', [companyName])
+    if (existingCompany.length > 0) {
+      return res.status(400).json({ status: 'error', message: 'Company name is already registered.' })
+    }
+
+    // 1. Create company
+    const [compResult]: any = await db.query('INSERT INTO Companies (name) VALUES (?)', [companyName])
+    const companyId = compResult.insertId
+
+    // 2. Hash admin password & insert admin employee
+    const salt = await bcrypt.genSalt(10)
+    const hashedPassword = await bcrypt.hash(adminPassword, salt)
+
+    await db.query(
+      'INSERT INTO Employees (id, company_id, name, role, joining_date, password, is_activated) VALUES (?, ?, ?, "Admin", ?, ?, true)',
+      [adminId, companyId, adminName, adminJoiningDate, hashedPassword]
+    )
+
+    // Audit log company creation
+    await db.query(
+      `INSERT INTO AuditLogs (company_id, table_name, record_id, field_name, old_value, new_value, changed_by) 
+       VALUES (?, 'Companies', ?, 'CREATE', '', ?, ?)`,
+      [companyId, companyId.toString(), companyName, adminId]
+    )
+
+    res.status(201).json({
+      status: 'success',
+      message: `Company '${companyName}' registered successfully! Your Company ID is: ${companyId}`,
+      companyId
+    })
+  } catch (error) {
+    next(error)
+  }
+})
+
+// 2. Account Self-Registration API
 router.post('/activate', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { id, name, role, joining_date, password } = req.body
+    const { companyId, id, name, role, joining_date, password } = req.body
 
     // Simple fields validation
-    if (!id || !name || !role || !joining_date || !password) {
-      return res.status(400).json({ status: 'error', message: 'All registration fields are required' })
+    if (!companyId || !id || !name || !role || !joining_date || !password) {
+      return res.status(400).json({ status: 'error', message: 'All registration fields (including Company ID) are required' })
     }
 
     // Role-Prefix checking
@@ -35,10 +87,16 @@ router.post('/activate', async (req: Request, res: Response, next: NextFunction)
       })
     }
 
-    // Query if record already exists
+    // Verify company exists
+    const [companies]: any = await db.query('SELECT * FROM Companies WHERE id = ?', [companyId])
+    if (companies.length === 0) {
+      return res.status(400).json({ status: 'error', message: 'Invalid Company ID. Company not found.' })
+    }
+
+    // Query if record already exists under this company
     const [rows]: any = await db.query(
-      'SELECT * FROM Employees WHERE id = ?',
-      [id]
+      'SELECT * FROM Employees WHERE id = ? AND company_id = ?',
+      [id, companyId]
     )
 
     if (rows.length > 0) {
@@ -74,8 +132,8 @@ router.post('/activate', async (req: Request, res: Response, next: NextFunction)
       const hashedPassword = await bcrypt.hash(password, salt)
 
       await db.query(
-        'UPDATE Employees SET password = ?, is_activated = true WHERE id = ?',
-        [hashedPassword, id]
+        'UPDATE Employees SET password = ?, is_activated = true WHERE id = ? AND company_id = ?',
+        [hashedPassword, id, companyId]
       )
 
       return res.status(200).json({
@@ -88,67 +146,62 @@ router.post('/activate', async (req: Request, res: Response, next: NextFunction)
     const salt = await bcrypt.genSalt(10)
     const hashedPassword = await bcrypt.hash(password, salt)
 
-    const [countRows]: any = await db.query('SELECT COUNT(*) as count FROM Employees')
-    const isFirst = countRows[0].count === 0
-
     await db.query(
-      'INSERT INTO Employees (id, name, role, joining_date, password, is_activated) VALUES (?, ?, ?, ?, ?, ?)',
-      [id, name, role, joining_date, hashedPassword, isFirst]
+      'INSERT INTO Employees (id, company_id, name, role, joining_date, password, is_activated) VALUES (?, ?, ?, ?, ?, ?, false)',
+      [id, companyId, name, role, joining_date, hashedPassword]
     )
 
     res.status(200).json({
       status: 'success',
-      message: isFirst
-        ? 'First account registered and automatically approved!'
-        : 'Registration request submitted successfully. Awaiting Admin approval.'
+      message: 'Registration request submitted successfully. Awaiting Admin approval.'
     })
   } catch (error) {
     next(error)
   }
 })
 
-// 2. Login API
+// 3. Login API
 router.post('/login', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { id, password, role } = req.body
+    const { companyId, id, password, role } = req.body
 
-    if (!id || !password || !role) {
-      return res.status(400).json({ status: 'error', message: 'Employee ID, password, and role are required' })
+    if (!companyId || !id || !password || !role) {
+      return res.status(400).json({ status: 'error', message: 'Company ID, Employee ID, password, and role are required' })
     }
 
-    // Check employee
-    const [rows]: any = await db.query('SELECT * FROM Employees WHERE id = ?', [id])
-    console.log('[DEBUG] Query result rows:', rows)
+    // Check employee and fetch company name
+    const [rows]: any = await db.query(
+      `SELECT e.*, c.name AS company_name 
+       FROM Employees e 
+       JOIN Companies c ON e.company_id = c.id 
+       WHERE e.id = ? AND e.company_id = ?`, 
+      [id, companyId]
+    )
+
     if (rows.length === 0) {
-      console.log('[DEBUG] No employee found with ID:', id)
-      return res.status(401).json({ status: 'error', message: 'Invalid credentials' })
+      return res.status(401).json({ status: 'error', message: 'Invalid credentials or company ID mismatch' })
     }
 
     const employee = rows[0]
-    console.log('[DEBUG] Employee details:', { id: employee.id, is_activated: employee.is_activated, role: employee.role })
 
     // Verify role matches selected login role
     if (employee.role !== role) {
-      console.log('[DEBUG] Role mismatch. Expected:', employee.role, 'Selected:', role)
       return res.status(401).json({ status: 'error', message: 'Mismatched role for this Employee ID' })
     }
 
     if (!employee.is_activated) {
-      console.log('[DEBUG] Employee profile is not activated')
       return res.status(400).json({ status: 'error', message: 'Profile not activated. Please register/activate first.' })
     }
 
     // Compare password
     const isMatch = await bcrypt.compare(password, employee.password)
-    console.log('[DEBUG] Password comparison result:', isMatch)
     if (!isMatch) {
-      console.log('[DEBUG] Password mismatch. Input password was:', password)
       return res.status(401).json({ status: 'error', message: 'Invalid credentials' })
     }
 
-    // Issue JWT
+    // Issue JWT with company_id included
     const token = jwt.sign(
-      { id: employee.id, role: employee.role },
+      { id: employee.id, role: employee.role, company_id: employee.company_id },
       process.env.JWT_SECRET || 'fallback_secret',
       { expiresIn: '24h' }
     )
@@ -160,7 +213,9 @@ router.post('/login', async (req: Request, res: Response, next: NextFunction) =>
       user: {
         id: employee.id,
         name: employee.name,
-        role: employee.role
+        role: employee.role,
+        company_id: employee.company_id,
+        company_name: employee.company_name
       }
     })
   } catch (error) {
