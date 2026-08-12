@@ -11,3 +11,6 @@ dist/
 *postman_collection.json
 **/postman/
 **/.postman/
+
+# Project audit report (Do not push to github)
+docs/project_audit_report.md
