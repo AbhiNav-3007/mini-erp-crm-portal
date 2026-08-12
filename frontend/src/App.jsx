@@ -1,5 +1,7 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import './App.css'
+
+const API_BASE = import.meta.env.VITE_API_URL || '${API_BASE}'
 
 function App() {
   const showConfirm = (message, onConfirm) => {
@@ -150,7 +152,7 @@ function App() {
     window.addEventListener('popstate', handlePopState)
     // Check server status immediately and poll every 5 seconds
     const checkHealth = () => {
-      fetch('http://localhost:5001/api/health')
+      fetch('${API_BASE}/api/health')
         .then((res) => {
           if (res.ok) setServerStatus('online')
           else setServerStatus('offline')
@@ -179,7 +181,7 @@ function App() {
       limit: limitVal
     })
 
-    fetch(`http://localhost:5001/api/customers?${queryParams}`, {
+    fetch(`${API_BASE}/api/customers?${queryParams}`, {
       headers: { 'Authorization': `Bearer ${token}` }
     })
       .then((res) => {
@@ -208,7 +210,7 @@ function App() {
       limit: limitVal
     })
 
-    fetch(`http://localhost:5001/api/products?${queryParams}`, {
+    fetch(`${API_BASE}/api/products?${queryParams}`, {
       headers: { 'Authorization': `Bearer ${token}` }
     })
       .then((res) => res.json())
@@ -220,7 +222,7 @@ function App() {
       })
       .catch((err) => console.error('Error fetching products:', err))
 
-    fetch('http://localhost:5001/api/products/low-stock', {
+    fetch('${API_BASE}/api/products/low-stock', {
       headers: { 'Authorization': `Bearer ${token}` }
     })
       .then((res) => res.json())
@@ -240,7 +242,7 @@ function App() {
       return
     }
 
-    fetch(`http://localhost:5001/api/customers/${selectedCustomer.id}/notes`, {
+    fetch(`${API_BASE}/api/customers/${selectedCustomer.id}/notes`, {
       headers: { 'Authorization': `Bearer ${token}` }
     })
       .then((res) => res.json())
@@ -259,7 +261,7 @@ function App() {
       return
     }
 
-    fetch(`http://localhost:5001/api/products/${selectedProduct.id}/movements`, {
+    fetch(`${API_BASE}/api/products/${selectedProduct.id}/movements`, {
       headers: { 'Authorization': `Bearer ${token}` }
     })
       .then((res) => res.json())
@@ -275,7 +277,7 @@ function App() {
   const fetchEmployeeRoster = () => {
     if (!token || user?.role !== 'Admin') return
 
-    fetch('http://localhost:5001/api/employees', {
+    fetch('${API_BASE}/api/employees', {
       headers: { 'Authorization': `Bearer ${token}` }
     })
       .then((res) => res.json())
@@ -298,7 +300,7 @@ function App() {
   const fetchAuditLogs = () => {
     if (!token || user?.role !== 'Admin') return
 
-    fetch('http://localhost:5001/api/employees/audit-logs', {
+    fetch('${API_BASE}/api/employees/audit-logs', {
       headers: { 'Authorization': `Bearer ${token}` }
     })
       .then((res) => res.json())
@@ -327,7 +329,7 @@ function App() {
       status: challanStatusFilter
     })
 
-    fetch(`http://localhost:5001/api/challans?${queryParams}`, {
+    fetch(`${API_BASE}/api/challans?${queryParams}`, {
       headers: { 'Authorization': `Bearer ${token}` }
     })
       .then((res) => res.json())
@@ -344,7 +346,7 @@ function App() {
   useEffect(() => {
     if (!token || !selectedChallan) return
 
-    fetch(`http://localhost:5001/api/challans/${selectedChallan.id}`, {
+    fetch(`${API_BASE}/api/challans/${selectedChallan.id}`, {
       headers: { 'Authorization': `Bearer ${token}` }
     })
       .then((res) => res.json())
@@ -370,7 +372,7 @@ function App() {
     e.preventDefault()
     setLoginError('')
 
-    fetch('http://localhost:5001/api/auth/login', {
+    fetch('${API_BASE}/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id: loginId, password: loginPassword, role: selectedRole })
@@ -401,7 +403,7 @@ function App() {
     setActError('')
     setActSuccess('')
 
-    fetch('http://localhost:5001/api/auth/activate', {
+    fetch('${API_BASE}/api/auth/activate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -432,7 +434,7 @@ function App() {
     e.preventDefault()
     setEmpFormError('')
 
-    fetch('http://localhost:5001/api/employees', {
+    fetch('${API_BASE}/api/employees', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -463,7 +465,7 @@ function App() {
   // Approve employee registration request (Admin-only)
   const handleApproveEmployee = (id) => {
     showConfirm(`Are you sure you want to APPROVE the registration request for employee: ${id}?`, () => {
-      fetch(`http://localhost:5001/api/employees/${id}/approve`, {
+      fetch(`${API_BASE}/api/employees/${id}/approve`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -486,7 +488,7 @@ function App() {
   const handleDeleteEmployee = (id) => {
     if (!window.confirm(`Are you sure you want to permanently DELETE employee: ${id}? This action cannot be undone.`)) return
 
-    fetch(`http://localhost:5001/api/employees/${id}`, {
+    fetch(`${API_BASE}/api/employees/${id}`, {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${token}`
@@ -520,8 +522,8 @@ function App() {
     }
 
     const url = showCustomerForm === 'edit'
-      ? `http://localhost:5001/api/customers/${selectedCustomer.id}`
-      : 'http://localhost:5001/api/customers'
+      ? `${API_BASE}/api/customers/${selectedCustomer.id}`
+      : '${API_BASE}/api/customers'
 
     const method = showCustomerForm === 'edit' ? 'PUT' : 'POST'
 
@@ -557,7 +559,7 @@ function App() {
 
     if (!newNoteText.trim()) return
 
-    fetch(`http://localhost:5001/api/customers/${selectedCustomer.id}/notes`, {
+    fetch(`${API_BASE}/api/customers/${selectedCustomer.id}/notes`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -593,8 +595,8 @@ function App() {
     }
 
     const url = showProductForm === 'edit'
-      ? `http://localhost:5001/api/products/${selectedProduct.id}`
-      : 'http://localhost:5001/api/products'
+      ? `${API_BASE}/api/products/${selectedProduct.id}`
+      : '${API_BASE}/api/products'
 
     const method = showProductForm === 'edit' ? 'PUT' : 'POST'
 
@@ -628,7 +630,7 @@ function App() {
     e.preventDefault()
     setStockInError('')
 
-    fetch(`http://localhost:5001/api/products/${selectedProduct.id}/stock-in`, {
+    fetch(`${API_BASE}/api/products/${selectedProduct.id}/stock-in`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -678,7 +680,7 @@ function App() {
       return
     }
 
-    fetch('http://localhost:5001/api/challans', {
+    fetch('${API_BASE}/api/challans', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -707,7 +709,7 @@ function App() {
   // Phase 18: Confirm Challan
   const handleConfirmChallan = (challanId) => {
     showConfirm('Are you sure you want to CONFIRM this challan? This will permanently deduct product inventory levels.', () => {
-      fetch(`http://localhost:5001/api/challans/${challanId}/confirm`, {
+      fetch(`${API_BASE}/api/challans/${challanId}/confirm`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` }
       })
@@ -730,7 +732,7 @@ function App() {
   // Phase 18: Cancel Challan (Reverses stock level checks)
   const handleCancelChallan = (challanId) => {
     showConfirm('Are you sure you want to CANCEL this challan? Stock balances will be returned if it was already confirmed.', () => {
-      fetch(`http://localhost:5001/api/challans/${challanId}/cancel`, {
+      fetch(`${API_BASE}/api/challans/${challanId}/cancel`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` }
       })
@@ -754,7 +756,7 @@ function App() {
   const handleSaveChallanEdits = (challanId) => {
     setEditChallanError('')
 
-    fetch(`http://localhost:5001/api/challans/${challanId}`, {
+    fetch(`${API_BASE}/api/challans/${challanId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -914,7 +916,7 @@ function App() {
           <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl max-w-md w-full border border-slate-200 dark:border-slate-800 p-6 transform transition-all scale-100 duration-200">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-950/50 flex items-center justify-center text-amber-600 dark:text-amber-400">
-                <span className="text-xl font-bold">⚠️</span>
+                <span className="text-xl font-bold">âš ï¸</span>
               </div>
               <h3 className="text-lg font-bold text-slate-900 dark:text-white">
                 Confirm Action
@@ -957,7 +959,7 @@ function App() {
             onClick={() => setUiAlert(null)}
             className="text-slate-400 hover:text-slate-650 dark:hover:text-slate-200 font-black text-xs cursor-pointer px-1"
           >
-            ✕
+            âœ•
           </button>
         </div>
       )}
@@ -990,7 +992,7 @@ function App() {
               }`}
               title="Toggle theme mode"
             >
-              {darkMode ? '☀️ Light' : '🌙 Dark'}
+              {darkMode ? 'â˜€ï¸ Light' : 'ðŸŒ™ Dark'}
             </button>
             {!token ? (
               <>
@@ -1154,7 +1156,7 @@ function App() {
                   required
                   value={loginPassword}
                   onChange={(e) => setLoginPassword(e.target.value)}
-                  placeholder="••••••••"
+                  placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
                   className="w-full bg-white border border-slate-300 rounded-lg px-3.5 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition"
                 />
               </div>
@@ -2499,7 +2501,7 @@ function App() {
                                   onClick={() => window.print()}
                                   className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-bold text-center transition shadow-sm text-xs cursor-pointer flex items-center justify-center gap-1.5"
                                 >
-                                  📄 Export Invoice as PDF
+                                  ðŸ“„ Export Invoice as PDF
                                 </button>
 
                                 {/* Actions for Draft Challans */}
@@ -2902,3 +2904,4 @@ function App() {
 }
 
 export default App
+
