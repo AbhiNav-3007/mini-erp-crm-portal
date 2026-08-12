@@ -1,15 +1,17 @@
 # ERP + CRM Operations Portal
 
 ## 1. Project Overview
-The **ERP + CRM Operations Portal** is a full-stack internal business management application designed for a small wholesale/distribution-oriented organization. The purpose of the system is to bring several day-to-day operational activities into one centralized platform instead of managing them through disconnected tools, spreadsheets, or manual processes.
-The application combines essential CRM and ERP-style operational workflows such as customer management, follow-up tracking, product management, inventory monitoring, stock movements, sales challan management, and role-based access control.
-The system is intentionally designed as a focused business application rather than a large enterprise ERP. The objective is to build a practical, maintainable and complete full-stack solution where every major business action has a clear relationship with the underlying API, database and user interface.
+The **ERP + CRM Operations Portal** is a full-stack **multi-tenant SaaS** business management application. Any business can register their company, onboard their employees, and manage their operations — completely isolated from every other tenant — all on a single shared cloud platform.
+The application combines essential CRM and ERP-style operational workflows: customer management, follow-up tracking, product management, inventory monitoring, stock movements, sales challan management, and role-based access control. Each business (tenant) operates within its own data silo identified by a unique **Company ID**, ensuring zero cross-tenant data leakage.
+The system is intentionally designed as a focused, production-style SaaS application rather than a large enterprise ERP. The objective is to build a practical, maintainable, and complete full-stack solution where every major business action has a clear relationship with the underlying API, database, and user interface.
 
 ---
 
 ## 2. Business Problem & Purpose
 In a small business environment, different teams often handle different parts of the same business process. When these activities are handled separately, customer information can become difficult to maintain consistently, sales follow-ups can be forgotten, product and inventory information may not be immediately available, stock changes may lack a clear history, and different employees may receive access to information they should not manage.
+The portal also solves the **universal business onboarding problem**: any new business owner can register their company on the platform, get a unique Company ID, and immediately begin onboarding employees — without needing separate software or any developer intervention.
 The portal connects these modules into a unified system:
+- **Multi-Tenant SaaS**: Each business registers as an independent tenant with a unique Company ID; all data is logically isolated.
 - **CRM**: Customer profile management and follow-up activities.
 - **Product Management**: Maintaining product details and stock status.
 - **Inventory Management**: Monitoring stock levels and logging all stock changes.
@@ -45,16 +47,18 @@ Accounts users require access to relevant customer, challan and transaction info
 
 ---
 
-## 4. Employee Registration and Login
-* **Employee Identities**: Admin pre-creates employee records containing Employee ID, name, role, and joining date.
+## 4. Company Registration, Employee Activation & Login
+* **Company Registration**: Any new business owner visits **Activate Account → Register Company** tab, enters their company name and creates the initial Admin profile. The system creates a new tenant and returns a unique **Company ID**.
+* **Company ID**: Always unique (database auto-increment primary key). Even if two companies share the same name, their Company ID is different. All tenant isolation is based on this ID.
+* **Employee Identities**: Admin pre-creates employee records containing Employee ID, name, role, and joining date within their company scope.
 * **ID Validation**: Employee IDs follow prefix conventions matching the employee's role (e.g. Sales prefix must match Sales role selection during activation).
-* **Activation Workflow**:
-  1. User navigates to register and selects role.
-  2. Enters Employee ID, name, joining date, and password.
-  3. Backend verifies inputs match Admin's pre-created record and validates ID prefix.
-  4. Account is activated.
-* **Login Workflow**: Activated user selects profile, enters ID and password → backend verifies credentials → issues JWT token → redirects to role-based dashboard.
-* **Access Model**: Frontend displays dynamic layouts per role; backend enforces JWT authorization and RBAC permissions on all API endpoints.
+* **Activation Workflow (Employee)**:
+  1. User navigates to **Activate Account → Activate Employee** tab.
+  2. Enters Company ID, role, Employee ID, name, joining date, and sets password.
+  3. Backend verifies inputs match Admin's pre-created record within that company's scope.
+  4. Account is activated and scoped to that Company ID.
+* **Login Workflow**: Activated user enters Employee ID and password → backend verifies credentials within the correct company scope → issues JWT token containing `company_id` → redirects to role-based dashboard.
+* **Access Model**: Frontend displays dynamic layouts per role; backend enforces JWT authorization, RBAC permissions, and `company_id` scoping on all API endpoints.
 
 ---
 
@@ -89,34 +93,38 @@ Accounts users require access to relevant customer, challan and transaction info
 ## 7. UI / UX Structure
 
 ### 7.1 Landing Page
-The landing page introduces the portal and provides the application identity, a short description of the workflows, and option buttons for user login and user registration/account activation.
+The landing page introduces the portal and provides the application identity, a short description of the workflows, and navigation buttons for **Sign In** and **Activate Account**.
 
 ### 7.2 Login Page
 Contains role profile selection buttons (Admin, Sales, Warehouse, Accounts), text input fields for Employee ID and Password, and a submit button. Any mismatched profile selection yields a clear validation error.
 
-### 7.3 Registration & Activation Page
-Form inputs for choosing a profile, Employee ID, Employee name, Date of joining, Role select, Password, and Password confirmation. Inputs are validated authoritatively on the backend.
+### 7.3 Unified Activate Account Page
+A single-card page with a **tab switcher** at the top presenting two modes:
+- **Activate Employee** (default): Allows existing employees to complete onboarding using their Company ID, Employee ID, Name, Joining Date, and a new password.
+- **Register Company**: Allows new business owners to register their company name and create the initial Admin employee profile in one step. Returns a unique Company ID on success.
+This unified design eliminates navigation complexity while keeping both onboarding pathways clear and distinct.
 
 ### 7.4 Dashboard Layout
-Once logged in, the employee sees a standard layout structure consisting of a header (identifying the active user profile, name, and logout button) and a sidebar navigation panel which dynamically adapts to display pages permitted for the active role.
+Once logged in, the employee sees a standard layout structure consisting of a header (identifying the active user, company name, and logout button) and a sidebar navigation panel which dynamically adapts to display pages permitted for the active role.
 
 ### 7.5 Role-Based Dashboard Panels
-- **Admin Dashboard**: Contains summary cards for overall operations, employee profile status cards, customer management screens, product databases, stock levels, stock movement logs, and sales challans.
-- **Sales Dashboard**: Displays a directory of customers, follow-up editor widgets, and a sales challan creator form supporting draft saving and real-time inventory checks.
-- **Warehouse Dashboard**: Focuses on product catalog viewing, inventory stock adjustments (including a Stock IN transaction portal), and movement tracking history.
-- **Accounts Dashboard**: Contains lists of customers, completed challans, transaction records, and approved review/editing panels.
+- **Admin Dashboard**: Summary cards for overall operations, employee roster management, customer screens, product databases, stock levels, stock movement logs, and sales challans.
+- **Sales Dashboard**: Customer directory, follow-up editor widgets, and a sales challan creator form supporting draft saving and real-time inventory checks.
+- **Warehouse Dashboard**: Product catalog, inventory stock adjustments (Stock IN portal), and movement tracking history.
+- **Accounts Dashboard**: Lists of customers, confirmed challans, transaction records, and approved review/editing panels.
 
 ---
 
 ## 8. Data and Database Structure
-The application uses a relational MySQL database because the business data has clear relationships.
-* **Main Entities**: Employees, Customers, Follow-up Notes, Products, Stock Movements, Challans, and Challan Items.
+The application uses a relational **PostgreSQL** database deployed on Railway.
+* **Main Entities**: Companies, Employees, Customers, Follow-up Notes, Products, Stock Movements, Challans, and Challan Items.
+* **Multi-Tenant Scoping**: Every table (except `Companies`) has a `company_id` foreign key. All queries are filtered by `company_id` extracted from the authenticated user's JWT token.
 * **Relationship Workflow**:
   ```text
-  Employee ➔ Operational Records
-  Customer ➔ Many Challans ➔ Many Challan Items ➔ Products ➔ Stock Movements
+  Company ➔ Employees ➔ Operational Records
+  Company ➔ Customers ➔ Many Challans ➔ Many Challan Items ➔ Products ➔ Stock Movements
   ```
-* **Keys & Constraints**: Primary keys identify individual records, while foreign keys maintain relationships between related tables.
+* **Keys & Constraints**: Primary keys identify individual records; foreign keys maintain relationships between related tables; `company_id` foreign keys enforce tenant boundaries.
 
 ---
 
@@ -162,10 +170,12 @@ The application implements standardized error codes and user-friendly error mess
 ---
 
 ## 12. Tech Stack
-* **Frontend**: React, JavaScript, HTML, Vanilla CSS (responsive design).
-* **Backend**: Node.js, TypeScript, Express.js (REST APIs, request validation, error middleware).
-* **Database**: MySQL.
-* **Ops/Dev**: Git, GitHub, Postman, Docker, Docker Compose, AWS.
+* **Frontend**: React, JavaScript, Vite, Tailwind CSS (custom dark/light theme system).
+* **Backend**: Node.js, TypeScript, Express.js (REST APIs, JWT middleware, RBAC, error handling).
+* **Database**: PostgreSQL (multi-tenant, `company_id` scoped logical isolation).
+* **Auth**: JWT (Bearer tokens with `company_id` tenant payload embedded).
+* **Deployment**: Vercel (Frontend), Railway (Backend + PostgreSQL).
+* **Ops/Dev**: Git, GitHub, Postman, Docker, Docker Compose.
 
 ---
 
@@ -401,7 +411,7 @@ The project will be developed in small practical stages. Each stage is implement
   * *After completion*:
     - Document Dockerfiles, compose structure, and container network layout.
 
-* **Phase 23 — AWS Deployment**:
+* **Phase 23 — AWS Deployment or Railway+vercel**:
   * *Build*:
     - Deploy app on AWS (EC2/RDS/S3 or similar simple architecture), configure CORS, prod env, and HTTPS.
   * *Understand*:
@@ -411,18 +421,22 @@ The project will be developed in small practical stages. Each stage is implement
   * *After completion*:
     - Document public URLs and AWS cloud architecture.
 
-* **Phase 24 — Multi-Tenant SaaS Conversion**:
+* **Phase 24 — Multi-Tenant SaaS Conversion** ✅ *Completed*:
   * *Build*:
-    - Upgrade the database schema with a `Companies` table and add `company_id` column to all tables.
-    - Implement company registration (`/register-company`) and scoped login/activation routes.
-    - Filter all backend queries by `company_id` derived from the user's JWT.
-    - Update frontend with company sign-up forms and scoped auth credentials.
+    - Upgraded database schema with a `Companies` table; added `company_id` foreign key to all tenant-scoped tables (Employees, Customers, Products, Challans, ChallanItems, StockMovements, FollowUpNotes, AuditLogs).
+    - Implemented `/register-company` API endpoint to create new tenants with an initial Admin employee in a single transaction.
+    - Filtered all backend queries (GET, POST, PUT, DELETE) by `company_id` extracted from the authenticated user's JWT across all four routers: employees, customers, products, challans.
+    - Updated frontend with a **unified Activate Account page** containing a tab-switcher: **Activate Employee** (existing staff) and **Register Company** (new business owners). Removed the standalone Register Business navigation item from the header.
+    - Company ID is always unique (auto-increment PK); company names do not need to be unique.
   * *Understand*:
-    - Database partitioning, SaaS multi-tenancy, JWT-based tenant extraction, data isolation, and schema migrations.
+    - Logical data isolation via `company_id` scoping (shared tables, tenant-filtered queries) vs. physical isolation (separate databases per tenant).
+    - JWT-based tenant extraction: `company_id` is embedded in the JWT payload at login; all protected routes extract and enforce it via authentication middleware.
+    - SaaS onboarding UX: single unified page reduces navigation complexity while serving two distinct user types (new business owners and existing employees).
   * *Test*:
-    - Verify Company A and Company B have completely isolated data (e.g. employee IDs and products do not collide).
+    - Verified Company A and Company B have completely isolated data — employees, customers, products, and challans do not cross tenant boundaries.
+    - Verified new company registration creates both a `Companies` record and initial Admin employee in one atomic transaction.
   * *After completion*:
-    - Document company registration flow, API changes, and multi-tenant schema diagrams.
+    - Documented company registration flow, API changes, and multi-tenant schema in `docs/phase24_talking_points.md`.
 
 * **Phase 25 — Final QA and Project Presentation**:
   * *Build*:

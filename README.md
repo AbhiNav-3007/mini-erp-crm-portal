@@ -1,6 +1,6 @@
 # Mini ERP + CRM Operations Portal
 
-A premium, modern, and highly secure full-stack enterprise operations dashboard designed to manage employee rosters, customer relationships, real-time product inventory, and sales challans. 
+A premium, modern, and highly secure full-stack **multi-tenant SaaS** enterprise operations portal. Any business can register their company, onboard employees, and manage their operations completely isolated from every other tenant — all on a single shared platform.
 
 ### 🔗 Live Deployments
 * **Frontend Portal (Vercel):** [https://mini-erp-crm-portal-coral.vercel.app](https://mini-erp-crm-portal-coral.vercel.app)
@@ -35,47 +35,85 @@ A premium, modern, and highly secure full-stack enterprise operations dashboard 
 
 ## 🌟 Key Features
 
-### 1. Multi-Profile Access Control
-Tailored operational modules and views depending on the logged-in role:
-* **Admin:** Full system control, employee roster approval, pre-registering staff, audit logs.
-* **Sales:** Customer database management, adding follow-up logs, issuing draft challans.
-* **Warehouse:** Product inventory catalog, updating stock counts, tracking stock movement history.
-* **Accounts:** Confirming or cancelling challans, reviewing customer balances, logging adjustments.
+### 1. Multi-Tenant SaaS Architecture
+The system supports unlimited business tenants on a single shared database, with complete data isolation:
+* **Company Registration:** Any new business registers via the **Activate Account → Register Company** tab. They receive a unique Company ID.
+* **Tenant Scoping:** Every database query is scoped by `company_id` extracted from the user's JWT. Company A can never see Company B's data.
+* **Unique Company IDs:** Even if two companies share the same name (e.g., "Apex Logistics"), their auto-increment Company ID is always unique and forms the basis of all data separation.
 
-### 2. Automated Employee Pre-Registration
-* Pre-register staff directly from the Admin console.
-* When employees register with their **Employee ID, Name, Role, and Joining Date** matching the pre-registered details, their account is **automatically activated** without needing secondary approval.
-* General registrations are submitted as **Pending** and require manual Admin approval.
+### 2. Unified Onboarding (Single Entry Point)
+The **Activate Account** page serves two purposes via a clean tab-switcher:
+* **Activate Employee** — existing employees enter their Company ID + Employee ID to set up their login credentials.
+* **Register Company** — new business owners register their company and set up the initial Admin account in one step.
 
-### 3. Advanced Security & Compliance
-* **Session Protection:** Session-based authentication via `sessionStorage` (automatically logs the user out when the browser tab or window is closed).
-* **Idle Activity Timeout:** Automatically logs users out after **1 minute (60 seconds) of absolute inactivity** (monitors mouse movements, keystrokes, clicks, and scroll events).
-* **Password Encryption:** Hashed using `bcrypt` and validated via JSON Web Tokens (JWT).
+### 3. Multi-Profile Role-Based Access Control (RBAC)
+Tailored operational modules depending on the logged-in role:
+* **Admin:** Full system control, employee roster management, pre-registration, audit logs.
+* **Sales:** Customer database management, follow-up logging, issuing draft/confirmed challans.
+* **Warehouse:** Product inventory catalog, stock updates, stock movement history.
+* **Accounts:** Confirming/cancelling challans, reviewing customer balances, logging adjustments.
 
-### 4. Sales Challans & Inventory Lifecycle
+### 4. Automated Employee Pre-Registration
+* Admin pre-registers staff directly from the Admin console.
+* When employees activate with their **Company ID, Employee ID, Name, Role, and Joining Date** matching the pre-registered record, their account is activated instantly without secondary approval.
+
+### 5. Advanced Security & Compliance
+* **Session Protection:** `sessionStorage` — auto logout when the browser tab closes.
+* **Idle Timeout:** Auto logout after **60 seconds of absolute inactivity** (monitors mouse, keys, clicks, scroll).
+* **Password Encryption:** Hashed using `bcrypt`, verified via JSON Web Tokens (JWT).
+* **Tenant Isolation:** All API routes enforce `company_id` scoping via JWT middleware.
+
+### 6. Sales Challans & Inventory Lifecycle
 * Draft challan creation with line-item totals.
-* **Confirming** a challan automatically deducts quantities from the product inventory.
-* **Cancelling** or **Drafting** allows items to remain in or return to inventory safely.
+* **Confirming** a challan automatically deducts quantities from product inventory.
+* **Cancelling** safely returns or retains inventory stock.
 * Invoices can be exported to clean PDFs instantly.
 
-### 5. Interactive System Auditing
-* Every update made to Customers, Products, or Challans creates a traceable entry in the **System Audits** log (tracks table name, changed field, old value, new value, and who modified it).
+### 7. Interactive System Auditing
+* Every update to Customers, Products, or Challans creates a traceable entry in the **System Audits** log (table name, changed field, old value, new value, who modified it, timestamp).
 
 ---
 
 ## 🛠️ Technology Stack
 
-* **Frontend:** React.js, Vite, Tailwind CSS (Custom dark/light theme systems).
-* **Backend:** Node.js, Express, TypeScript.
-* **Database:** MySQL 8.0.
-* **Orchestration:** Docker, Docker Compose.
+| Layer | Technology |
+|---|---|
+| **Frontend** | React.js, Vite, Tailwind CSS (custom dark/light themes) |
+| **Backend** | Node.js, Express, TypeScript |
+| **Database** | PostgreSQL (multi-tenant, `company_id` scoped) |
+| **Auth** | JWT (Bearer tokens with tenant payload) |
+| **Deployment** | Vercel (Frontend), Railway (Backend + PostgreSQL) |
+| **Containerisation** | Docker, Docker Compose |
+
+---
+
+## 🏢 How Multi-Tenancy Works
+
+```
+New Business Owner:
+  → Activate Account → Register Company tab
+  → Enters Company Name + Admin details
+  → Receives unique Company ID (e.g., 3)
+  → All future data tagged with company_id = 3
+
+New Employee:
+  → Activate Account → Activate Employee tab
+  → Enters Company ID (3) + Employee ID + sets password
+  → Login issues JWT: { employee_id, role, company_id: 3 }
+  → Every API call is filtered: WHERE company_id = 3
+
+Result:
+  Company A and Company B share the same tables
+  but NEVER see each other's employees, customers,
+  products, or challans. ✅
+```
 
 ---
 
 ## 🚀 Setup & Running Locally
 
 ### Option A: Run via Docker Compose (Recommended)
-This will bootstrap the MySQL database, Backend server, and Frontend app automatically:
+Bootstraps the PostgreSQL database, Backend server, and Frontend app automatically:
 
 1. Clone the repository and navigate to the project root.
 2. Build and run the containers:
@@ -89,8 +127,8 @@ This will bootstrap the MySQL database, Backend server, and Frontend app automat
 ### Option B: Run Manually
 
 #### 1. Database Setup
-1. Create a MySQL database named `erp_crm_db`.
-2. Import the tables by running the SQL queries in [backend/schema.sql](backend/schema.sql).
+1. Create a PostgreSQL database named `erp_crm_db`.
+2. Import the schema by running the SQL queries in [backend/schema.sql](backend/schema.sql).
 
 #### 2. Running the Backend
 1. Navigate to the backend directory:
@@ -100,11 +138,7 @@ This will bootstrap the MySQL database, Backend server, and Frontend app automat
 2. Create a `.env` file based on `.env.example`:
    ```env
    PORT=5001
-   DB_HOST=localhost
-   DB_USER=root
-   DB_PASSWORD=your_password
-   DB_NAME=erp_crm_db
-   DB_PORT=3306
+   DATABASE_URL=postgresql://user:password@localhost:5432/erp_crm_db
    JWT_SECRET=your_jwt_secret
    ```
 3. Install dependencies and start the server:
@@ -129,3 +163,15 @@ This will bootstrap the MySQL database, Backend server, and Frontend app automat
    npm run dev
    ```
 4. Access the portal at `http://localhost:5173`.
+
+---
+
+## 🔑 Getting Started (First Use)
+
+1. Open the live portal or run locally.
+2. Click **Activate Account** in the header.
+3. Switch to the **Register Company** tab.
+4. Enter your **Company Name** and set up your Admin profile.
+5. Note the **Company ID** returned — share this with your employees.
+6. Your employees visit **Activate Account → Activate Employee**, enter the Company ID, and set their passwords.
+7. Everyone logs in with their Employee ID + Password + Company ID.
