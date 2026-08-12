@@ -6,3 +6,8 @@ dist/
 *.log
 .env
 **/.env
+
+# Postman local workspace files (Do not push to github)
+*postman_collection.json
+**/postman/
+**/.postman/
