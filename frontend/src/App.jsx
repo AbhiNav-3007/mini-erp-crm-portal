@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import './App.css'
 
 const API_BASE = import.meta.env.VITE_API_URL || '${API_BASE}'
@@ -916,7 +916,7 @@ function App() {
           <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl max-w-md w-full border border-slate-200 dark:border-slate-800 p-6 transform transition-all scale-100 duration-200">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-950/50 flex items-center justify-center text-amber-600 dark:text-amber-400">
-                <span className="text-xl font-bold">âš ï¸</span>
+                <span className="text-xl font-bold">\u26a0\ufe0f</span>
               </div>
               <h3 className="text-lg font-bold text-slate-900 dark:text-white">
                 Confirm Action
@@ -959,7 +959,7 @@ function App() {
             onClick={() => setUiAlert(null)}
             className="text-slate-400 hover:text-slate-650 dark:hover:text-slate-200 font-black text-xs cursor-pointer px-1"
           >
-            âœ•
+            \u2715
           </button>
         </div>
       )}
@@ -992,7 +992,7 @@ function App() {
               }`}
               title="Toggle theme mode"
             >
-              {darkMode ? 'â˜€ï¸ Light' : 'ðŸŒ™ Dark'}
+              {darkMode ? '\u2600\ufe0f Light' : '\uD83C\uDF19 Dark'}
             </button>
             {!token ? (
               <>
@@ -1156,7 +1156,7 @@ function App() {
                   required
                   value={loginPassword}
                   onChange={(e) => setLoginPassword(e.target.value)}
-                  placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+                  placeholder="••••••••"
                   className="w-full bg-white border border-slate-300 rounded-lg px-3.5 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition"
                 />
               </div>
